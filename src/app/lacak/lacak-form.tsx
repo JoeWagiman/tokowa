@@ -34,6 +34,7 @@ export function FormLacak({ kodeAwal, hpAwal }: { kodeAwal: string; hpAwal: stri
   const [muat, setMuat] = useState(false);
   const [galat, setGalat] = useState<string | null>(null);
   const [hasil, setHasil] = useState<LacakPesanan | null>(null);
+  const [pesanBayar, setPesanBayar] = useState<string | null>(null);
 
   async function cari(kodeV: string, hpV: string) {
     setMuat(true);
@@ -63,12 +64,14 @@ export function FormLacak({ kodeAwal, hpAwal }: { kodeAwal: string; hpAwal: stri
 
   function kirim(e: React.FormEvent) {
     e.preventDefault();
+    setPesanBayar(null);
     void cari(kode, hp);
   }
 
   function ulangi() {
     setHasil(null);
     setGalat(null);
+    setPesanBayar(null);
     setHp("");
   }
 
@@ -118,13 +121,63 @@ export function FormLacak({ kodeAwal, hpAwal }: { kodeAwal: string; hpAwal: stri
           </div>
         )}
 
-        {hasil && <KartuLacak p={hasil} onUlangi={ulangi} />}
+        {hasil && (
+          <KartuLacak
+            p={hasil}
+            hp={hp}
+            pesanBayar={pesanBayar}
+            onPesanBayar={setPesanBayar}
+            onSegarkan={() => void cari(kode, hp)}
+            onUlangi={ulangi}
+          />
+        )}
       </div>
     </>
   );
 }
 
-function KartuLacak({ p, onUlangi }: { p: LacakPesanan; onUlangi: () => void }) {
+function KartuLacak({
+  p,
+  hp,
+  pesanBayar,
+  onPesanBayar,
+  onSegarkan,
+  onUlangi,
+}: {
+  p: LacakPesanan;
+  hp: string;
+  pesanBayar: string | null;
+  onPesanBayar: (pesan: string | null) => void;
+  onSegarkan: () => void;
+  onUlangi: () => void;
+}) {
+  const [kirim, setKirim] = useState(false);
+  const [galatBayar, setGalatBayar] = useState<string | null>(null);
+
+  async function tandaiSudahBayar() {
+    setKirim(true);
+    setGalatBayar(null);
+    try {
+      const res = await fetch("/api/lacak/bayar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kode: p.id, hp }),
+        cache: "no-store",
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setGalatBayar(body?.error?.message ?? "Tidak bisa menandai pembayaran. Coba lagi.");
+        return;
+      }
+      onPesanBayar(body?.data?.pesan ?? "Konfirmasi diteruskan ke toko.");
+      onSegarkan();
+    } catch {
+      setGalatBayar("Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setKirim(false);
+    }
+  }
+
   return (
     <section className="kartu" aria-label={`Pesanan ${p.kode}`}>
       <div className="lacak-head">
@@ -152,6 +205,12 @@ function KartuLacak({ p, onUlangi }: { p: LacakPesanan; onUlangi: () => void }) 
         </p>
       )}
 
+      {pesanBayar && (
+        <p className="pesan-box" style={{ display: "block" }}>
+          {pesanBayar}
+        </p>
+      )}
+
       {p.bayar && p.status === "tunggu_bayar" && (
         <div className="lacak-bayar">
           <h3 style={{ fontSize: 16, fontWeight: 700 }}>Cara bayar</h3>
@@ -169,12 +228,32 @@ function KartuLacak({ p, onUlangi }: { p: LacakPesanan; onUlangi: () => void }) 
               WhatsApp.
             </p>
           )}
+          <div style={{ marginTop: 12 }}>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => void tandaiSudahBayar()}
+              disabled={kirim}
+              aria-busy={kirim}
+            >
+              {kirim ? "Mengirim" : "Saya sudah bayar"}
+            </button>
+            <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 8 }}>
+              Tandai di sini supaya toko mengecek mutasinya. Kirim juga foto bukti lewat
+              WhatsApp supaya lebih cepat diperiksa.
+            </p>
+            {galatBayar && (
+              <p style={{ color: "var(--danger)", fontSize: 14, marginTop: 8 }} role="alert">
+                {galatBayar}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
       {p.bayar && p.status === "tunggu_verifikasi" && (
         <p style={{ color: "var(--muted)", marginTop: 16 }}>
-          Bukti bayarmu sedang diperiksa toko. Status akan berubah setelah toko memverifikasi.
+          Pembayaranmu sedang diperiksa toko. Status akan berubah setelah toko memverifikasi.
         </p>
       )}
 

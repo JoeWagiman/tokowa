@@ -185,6 +185,26 @@ ulang dari DB, tidak pernah dari body.
   `/lacak?kode=..&hp=..` (4 angka terakhir terisi otomatis). Bukti bayar dikirim
   lewat WhatsApp, tidak ada unggah berkas di web.
 
+### 4.10 Konfirmasi bayar pembeli (publik, tanpa auth)
+Menutup jeda antara pesanan web dibuat dan verifikasi seller. Pembeli menyatakan
+sudah membayar; sistem TIDAK memeriksa uang dan TIDAK mengirim bukti berkas.
+
+- `POST /api/v1/pesanan/bayar` → body `{kode, hp}` (verifikasi sama seperti
+  lacak: kode 6 huruf terakhir id atau id penuh + 4 angka terakhir nomor WA).
+  Bila status `tunggu_bayar` → geser ke `tunggu_verifikasi`, tandai
+  `bukti = "pembeli-menyatakan-bayar"` (hanya bila `bukti` masih kosong), dan
+  beri tahu owner (WABA bila terpasang, kalau tidak pesanan tetap muncul di
+  dashboard seller sebagai antrean). Balasan `{data: {id, kode, status, pesan}}`.
+  Idempoten: `tunggu_verifikasi` yang sudah ada tidak memicu notifikasi ulang;
+  `paid`/`kirim`/`selesai` membalas "sudah dibayar". Kode/nomor tidak cocok →
+  `404`. Rate limit 10 per 10 menit per IP.
+- Jalur chat ikut memakai helper yang sama (`konfirmasiBayarPembeli`), jadi bot
+  tidak lagi menjawab "dicek otomatis oleh sistem" untuk QRIS statis toko.
+- Tokowa: BFF publik `POST /api/lacak/bayar` + tombol "Saya sudah bayar" di kartu
+  `/lacak`. Setelah menandai, halaman menyegarkan status sendiri (menjadi
+  "Menunggu pemeriksaan toko").
+- Stok tetap utuh di langkah ini; pengurangan hanya saat seller `konfirmasi`.
+
 ## 5. Keputusan yang sudah dikunci
 
 - **KYC satu backend.** Tidak ada state KYC yang disimpan di Tokowa; antrean
@@ -198,6 +218,9 @@ ulang dari DB, tidak pernah dari body.
   memverifikasi lewat aksi `konfirmasi` (`tunggu_verifikasi` → `paid`).
 - **Bukti bayar lewat WhatsApp, tanpa unggah di web.** R2 belum dikonfigurasi,
   jadi tidak ada alur upload berkas untuk pembeli.
+- **Pembeli menandai "sudah bayar" dari web, tanpa bukti berkas.** Itu hanya
+  memindahkan pesanan ke `tunggu_verifikasi` dan memberi tahu toko; keputusan
+  uang tetap di seller lewat aksi `konfirmasi`.
 - **Tiga mode kirim, tapi kurir instan belum otomatis.** `self_pickup` dan
   `seller_delivery` (tarif flat owner) sudah bisa dihitung; `courier_instant`
   diarahkan ke WhatsApp sampai ada sumber tarif kurir.
@@ -250,3 +273,5 @@ terulang:
 | Proxy Tokowa meneruskan `/v1/...` | obrool butuh prefiks `/api`, jadi BFF menempel `/api` |
 | `export const GET = core` di route handler | Next 16.3.1 butuh `export async function GET` |
 | Aksi `konfirmasi` update status mentah | wajib `terapkanPesananPaid` agar stok + ledger ikut |
+| Bot menjawab "dicek otomatis" untuk QRIS statis | QRIS statis: geser `tunggu_bayar` → `tunggu_verifikasi` + beri tahu owner |
+| Bot "YA" menerbitkan paylink iPaymu untuk pesanan web | pesanan web `qris_toko` dapat cara bayar toko, bukan paylink |
