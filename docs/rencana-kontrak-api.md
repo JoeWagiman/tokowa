@@ -1,8 +1,10 @@
 # Kontrak API Tokowa ↔ obrool
 
 Status: **F1–F3 terimplementasi dan sudah lewat uji ujung ke ujung di branch
-dev obrool.** Bagian F4 masih rencana. Dokumen ini mencatat endpoint yang
-benar-benar ada di kode obrool (`D:\Project\obrool`), bukan usulan lagi.
+dev obrool.** F4 baru sebagian: pelacakan pesanan pembeli sudah jalan.
+Sisanya (quote, buat pesanan, pengecualian status, passthrough WABA) masih
+rencana. Dokumen ini mencatat endpoint yang benar-benar ada di kode obrool
+(`D:\Project\obrool`), bukan usulan lagi.
 
 Aturan yang mengikat adalah pembagian tanggung jawab dan nama endpoint. Field
 yang kontraknya belum stabil ditandai eksplisit.
@@ -130,6 +132,22 @@ pernah dari janji chat.
 - `GET /api/v1/admin/sellers?q=` → daftar agent dengan
   `{agentId,nama,email,pemilik,statusKyc,catatan,jumlahProduk,createdAt}`.
 
+### 4.8 Pelacakan pesanan pembeli (publik, tanpa auth)
+- `GET /api/v1/pesanan/lacak?kode=&hp=` di obrool. `kode` adalah 6 huruf terakhir
+  id pesanan (sama dengan kode di chat) atau id penuh. `hp` adalah 4 angka
+  terakhir nomor WhatsApp pembeli. Rate limit 12 percobaan per menit per IP+kode.
+  - Cocok → `{data: {id, kode, toko, status, statusLabel, total, metodeBayar,
+    pelangganMask, items[], langkah[{status,label,keadaan}], bayar, dibuatAt, diperbaruiAt}}`.
+  - Tidak cocok → `404 not_found` dengan pesan yang tidak membocorkan apakah
+    pesanan ada. Kode salah format → `400`.
+  - Nomor pembeli dikembalikan termask (`••••6789`). Bukti bayar dan paylink tidak
+    ikut dibuka.
+  - `bayar` hanya diisi saat status `tunggu_bayar`/`tunggu_verifikasi`, berisi
+    `{metode, qrisNama, qrisUrl}` dari `TokoSetting` toko (bisa `null` bila toko
+    belum memasang QRIS).
+- Tokowa: `GET /api/lacak` (BFF publik tanpa token) + halaman `/lacak`
+  (`?kode=` boleh dikirim di tautan WhatsApp untuk mengisi otomatis).
+
 ## 5. Keputusan yang sudah dikunci
 
 - **KYC satu backend.** Tidak ada state KYC yang disimpan di Tokowa; antrean
@@ -138,6 +156,11 @@ pernah dari janji chat.
   ulang data (pull). Webhook outbound ditunda; lihat bagian 7.
 - **Hapus permanen produk butuh konfirmasi nama.** Ini bertahan sebagai
   pengaman, dan UI Tokowa memintanya.
+- **Pembayaran pesanan web: QRIS statis toko + verifikasi seller.** Tidak pakai
+  paylink iPaymu untuk jalur ini. Pembeli membayar ke QRIS toko, seller
+  memverifikasi lewat aksi `konfirmasi` (`tunggu_verifikasi` → `paid`).
+- **Pelacakan pembeli butuh kode pesanan + 4 angka terakhir nomor WA.** Bukan
+  id saja, supaya tautan yang tersebar tidak membuka isi pesanan orang lain.
 - **WA number belum diatur.** Semua tombol WhatsApp nonaktif dengan
   `title="Nomor WhatsApp belum diatur"`. Ini keadaan yang disengaja, bukan bug.
 
@@ -146,19 +169,22 @@ pernah dari janji chat.
 1. **Chat WABA sebagai jalur belanja.** Nomor WABA platform → webhook Meta →
    agent obrool. Tokowa tidak di jalur chat. Dua opsi: obrool memasang webhook
    sendiri, atau Tokowa hanya pass-through tanpa mengubah body.
-2. **Quote dan pesanan web.** `POST /orders/quote` (3 mode:
-   `courier_instant | seller_delivery | self_pickup`), `POST /orders` dengan
-   idempotency, `GET /orders/{id}` plus timeline pelacakan.
-3. **Pengecualian status.** Pembatalan, sengketa, dan retur (`TokoRetur` sudah
-   ada di schema) perlu endpoint dan UI.
+2. **Quote dan pesanan web.** `POST /orders/quote` dengan tiga mode
+   (`courier_instant | seller_delivery | self_pickup`), `POST /orders` dengan
+   idempotency, lalu `GET /orders/{id}`. `courier_instant` masih butuh sumber
+   estimasi ongkir kurir yang belum ada di obrool.
+3. **Pengecualian status.** Pembatalan pembeli, sengketa, dan retur
+   (`TokoRetur` sudah ada di schema) perlu endpoint dan UI.
 4. **Webhook balik obrool → Tokowa** untuk `order.status_changed` dan
    `dispute.decided`, signed HMAC, kalau polling mulai berat.
+
+Sudah selesai lebih dulu: **pelacakan pesanan pembeli** (bagian 4.8), read-only,
+tanpa menyentuh uang.
 
 ## 7. Masih terbuka
 
 - Media storage: satu bucket R2 untuk produk dan KYC (mempengaruhi alur upload)?
-- Penyedia pembayaran dan alur webhook `paid` (COD manual atau payment gateway)?
-  F4 mengikuti keputusan ini.
+- Sumber estimasi ongkir untuk mode `courier_instant`.
 - Normalisasi endpoint: kapan `/api/agents/*` pindah ke `v1/*` dan envelope
   diseragamkan ke `{data}`.
 - Idempotency window untuk `POST /orders` (usulan 24 jam).

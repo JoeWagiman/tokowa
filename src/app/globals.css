@@ -560,3 +560,139 @@ form.baris-form label select {
   margin-top: 4px;
 }
 
+.lacak-wrap {
+  max-width: 720px;
+}
+
+.lacak-form {
+  display: grid;
+  gap: 6px;
+  margin-top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.lacak-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.lacak-form input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--paper);
+  font: inherit;
+  padding: 10px 14px;
+}
+
+.lacak-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.lacak-form .btn {
+  margin-top: 16px;
+  justify-self: start;
+}
+
+.lacak-hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+.lacak-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lacak-kode {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 2px;
+}
+
+.jejak {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.jejak li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.jejak li:last-child {
+  border-bottom: 0;
+}
+
+.jejak .titik {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  flex: 0 0 auto;
+}
+
+.jejak li.selesai {
+  color: var(--ink);
+}
+
+.jejak li.selesai .titik {
+  background: var(--accent);
+}
+
+.jejak li.kini {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.jejak li.kini .titik {
+  background: var(--accent-ink);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.lacak-bayar {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+.lacak-bayar img {
+  margin: 12px 0;
+  border-radius: 8px;
+}
+
+.lacak-waktu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 20px 0 0;
+}
+
+.lacak-waktu dt {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lacak-waktu dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+

@@ -13,6 +13,7 @@ export function TopNav() {
         </Link>
         <nav className="nav">
           <Link href="/katalog">Katalog</Link>
+          <Link href="/lacak">Lacak pesanan</Link>
         </nav>
         {wa ? (
           <a className="btn" href={wa} target="_blank" rel="noreferrer">
