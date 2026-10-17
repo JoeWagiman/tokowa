@@ -542,21 +542,22 @@ img {
   margin-bottom: 4px;
 }
 
-form.baris-form {
+.baris-form {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-form.baris-form label {
+.baris-form label {
   display: block;
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
 }
 
-form.baris-form label input,
-form.baris-form label select {
+.baris-form label input,
+.baris-form label select,
+.baris-form label textarea {
   margin-top: 4px;
 }
 
@@ -694,5 +695,84 @@ form.baris-form label select {
 .lacak-waktu dd {
   margin: 2px 0 0;
   font-weight: 600;
+}
+
+.pesan-box {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.pesan-box textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.pilihan-kirim {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pilihan-kirim legend {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 0 6px;
+  width: 100%;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  background: var(--paper);
+}
+
+.pill.aktif {
+  border-color: var(--accent-bright);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.pill input {
+  accent-color: var(--accent-bright);
+}
+
+.ringkas-total {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.baris-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.baris-total.is-besar {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 4px;
 }
 

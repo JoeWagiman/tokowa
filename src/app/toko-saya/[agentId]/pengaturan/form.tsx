@@ -8,6 +8,7 @@ type Setting = {
   hariBuka: string | null;
   jendelaReturHari: number;
   ongkirRetur: string | null;
+  ongkirSellerFlat: number | null;
   qrisStatisNama: string | null;
   qrisStatisUrl: string | null;
 };
@@ -43,6 +44,7 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
           hariBuka: hari.size ? [...hari].sort((a, b) => a - b).join(",") : "",
           jendelaReturHari: Number(get("jendelaReturHari") || 0),
           ongkirRetur: get("ongkirRetur"),
+          ongkirSellerFlat: get("ongkirSellerFlat") === "" ? "" : Number(get("ongkirSellerFlat")),
           qrisStatisNama: get("qrisStatisNama") || "",
           qrisStatisUrl: get("qrisStatisUrl") || "",
         }),
@@ -107,6 +109,29 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
             </select>
           </label>
         </div>
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Pengiriman</h2>
+        <div className="baris-form">
+          <label>
+            Ongkir kirim sendiri (Rp)
+            <input
+              className="rincian-input"
+              name="ongkirSellerFlat"
+              type="number"
+              min={0}
+              max={1000000}
+              step={500}
+              placeholder="mis. 8000"
+              defaultValue={setting.ongkirSellerFlat ?? ""}
+            />
+          </label>
+        </div>
+        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
+          Dipakai saat pembeli memilih "diantar toko" di web. Kosongkan bila belum ada tarif tetap, pembeli diarahkan
+          memilih ambil di toko atau bertanya lewat WhatsApp.
+        </p>
       </section>
 
       <section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { rp } from "@/lib/format";
 import type { LacakPesanan } from "@/lib/tipe";
 
@@ -22,21 +22,26 @@ const waktu = (iso: string) =>
     minute: "2-digit",
   });
 
-export function FormLacak({ kodeAwal }: { kodeAwal: string }) {
+const labelKirim: Record<string, string> = {
+  courier_instant: "Kurir instan",
+  seller_delivery: "Diantar toko",
+  self_pickup: "Ambil di toko",
+};
+
+export function FormLacak({ kodeAwal, hpAwal }: { kodeAwal: string; hpAwal: string }) {
   const [kode, setKode] = useState(kodeAwal);
-  const [hp, setHp] = useState("");
+  const [hp, setHp] = useState(hpAwal);
   const [muat, setMuat] = useState(false);
   const [galat, setGalat] = useState<string | null>(null);
   const [hasil, setHasil] = useState<LacakPesanan | null>(null);
 
-  async function kirim(e: React.FormEvent) {
-    e.preventDefault();
+  async function cari(kodeV: string, hpV: string) {
     setMuat(true);
     setGalat(null);
     setHasil(null);
     try {
       const res = await fetch(
-        `/api/lacak?kode=${encodeURIComponent(kode.trim())}&hp=${encodeURIComponent(hp.trim())}`,
+        `/api/lacak?kode=${encodeURIComponent(kodeV.trim())}&hp=${encodeURIComponent(hpV.trim())}`,
         { cache: "no-store" }
       );
       const body = await res.json().catch(() => null);
@@ -50,6 +55,15 @@ export function FormLacak({ kodeAwal }: { kodeAwal: string }) {
     } finally {
       setMuat(false);
     }
+  }
+
+  useEffect(() => {
+    if (kodeAwal && hpAwal.length === 4) void cari(kodeAwal, hpAwal);
+  }, [kodeAwal, hpAwal]);
+
+  function kirim(e: React.FormEvent) {
+    e.preventDefault();
+    void cari(kode, hp);
   }
 
   function ulangi() {
@@ -183,6 +197,13 @@ function KartuLacak({ p, onUlangi }: { p: LacakPesanan; onUlangi: () => void }) 
               <td>{rp(i.harga)}</td>
             </tr>
           ))}
+          {p.pengiriman && (
+            <tr>
+              <td>Ongkir ({labelKirim[p.pengiriman.mode] ?? p.pengiriman.mode})</td>
+              <td />
+              <td>{p.pengiriman.ongkir > 0 ? rp(p.pengiriman.ongkir) : "gratis"}</td>
+            </tr>
+          )}
           <tr>
             <td style={{ fontWeight: 700 }}>Total</td>
             <td />
@@ -190,6 +211,12 @@ function KartuLacak({ p, onUlangi }: { p: LacakPesanan; onUlangi: () => void }) 
           </tr>
         </tbody>
       </table>
+
+      {p.pengiriman?.alamat && (
+        <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 8 }}>
+          {p.pengiriman.mode === "self_pickup" ? "Catatan ambil di toko" : "Dikirim ke"}: {p.pengiriman.alamat}
+        </p>
+      )}
 
       <dl className="lacak-waktu">
         <div>

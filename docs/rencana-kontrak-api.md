@@ -1,10 +1,10 @@
 # Kontrak API Tokowa ↔ obrool
 
 Status: **F1–F3 terimplementasi dan sudah lewat uji ujung ke ujung di branch
-dev obrool.** F4 baru sebagian: pelacakan pesanan pembeli sudah jalan.
-Sisanya (quote, buat pesanan, pengecualian status, passthrough WABA) masih
-rencana. Dokumen ini mencatat endpoint yang benar-benar ada di kode obrool
-(`D:\Project\obrool`), bukan usulan lagi.
+dev obrool.** F4 sebagian: pelacakan pesanan pembeli (4.8) dan pemesanan web
+quote + buat pesanan (4.9) sudah jalan. Sisanya (pengecualian status,
+passthrough WABA) masih rencana. Dokumen ini mencatat endpoint yang benar-benar
+ada di kode obrool (`D:\Project\obrool`), bukan usulan lagi.
 
 Aturan yang mengikat adalah pembagian tanggung jawab dan nama endpoint. Field
 yang kontraknya belum stabil ditandai eksplisit.
@@ -106,6 +106,10 @@ pernah dari janji chat.
 
 ### 4.5 Penjual: setting toko (auth user)
 - `GET`/`POST /api/agents/{agentId}/toko/setting` → baca/tulis setting.
+- Field terkini: `jendelaReturHari`, `ongkirRetur`, `qrisStatisNama`,
+  `qrisStatisUrl`, `jamBuka`, `jamTutup`, `hariBuka`, dan **`ongkirSellerFlat`**
+  (tarif kirim sendiri per pesanan, 0-1.000.000; `null`/kosong = belum ada
+  tarif tetap). Tambahan `ongkirSellerFlat` dipakai quote `seller_delivery`.
 - `POST /api/agents/{agentId}/toko/foto` (multipart) → foto toko lewat R2.
 
 ### 4.6 Penjual: pesanan (auth user)
@@ -116,12 +120,14 @@ pernah dari janji chat.
 - `POST /api/v1/seller/pesanan/{id}/aksi` → body `{aksi}`. Aturan transisi:
   | aksi | dari | hasil |
   |---|---|---|
-  | `konfirmasi` | `tunggu_verifikasi` | `paid` |
+  | `konfirmasi` | `tunggu_verifikasi` | `paid` (+ stok + ledger) |
   | `tolak` | `tunggu_verifikasi` | `batal` |
   | `kirim` | `paid` | `kirim` |
   | `selesai` | `kirim` | `selesai` |
   | `batal` | `tunggu_bayar`, `tunggu_verifikasi` | `batal` |
   Transisi tidak valid dibalas `409` dengan pesan Indonesia.
+  `konfirmasi` bukan update status mentah: ia memanggil `terapkanPesananPaid`
+  (idempoten) sehingga stok berkurang, kartu stok tercatat, dan ledger bertambah.
 
 ### 4.7 Admin (auth role admin)
 - `GET /api/v1/admin/kyc?status=` (`status=semua` untuk semua, default `menunggu`)
@@ -137,7 +143,9 @@ pernah dari janji chat.
   id pesanan (sama dengan kode di chat) atau id penuh. `hp` adalah 4 angka
   terakhir nomor WhatsApp pembeli. Rate limit 12 percobaan per menit per IP+kode.
   - Cocok → `{data: {id, kode, toko, status, statusLabel, total, metodeBayar,
-    pelangganMask, items[], langkah[{status,label,keadaan}], bayar, dibuatAt, diperbaruiAt}}`.
+    pelangganMask, items[], langkah[{status,label,keadaan}],
+    pengiriman{mode,ongkir,alamat}, bayar, dibuatAt, diperbaruiAt}}`.
+    `pengiriman` `null` bila pesanan lama belum punya mode kirim.
   - Tidak cocok → `404 not_found` dengan pesan yang tidak membocorkan apakah
     pesanan ada. Kode salah format → `400`.
   - Nomor pembeli dikembalikan termask (`••••6789`). Bukti bayar dan paylink tidak
@@ -147,6 +155,35 @@ pernah dari janji chat.
     belum memasang QRIS).
 - Tokowa: `GET /api/lacak` (BFF publik tanpa token) + halaman `/lacak`
   (`?kode=` boleh dikirim di tautan WhatsApp untuk mengisi otomatis).
+
+### 4.9 Pemesanan web (publik, tanpa auth)
+Tamu (guest checkout) dengan nomor WhatsApp, bukan akun. Harga selalu dihitung
+ulang dari DB, tidak pernah dari body.
+
+- `POST /api/v1/pesanan/quote` → body `{agentId, items:[{produkId, qty}], mode}`.
+  Validasi: agent ada, 1-20 baris, qty 1-99 per produk, produk aktif dan milik
+  agent, stok cukup. Balasan `{data: {subtotal, ongkir, total, mode, labelMode,
+  catatan, items[]}}`. `ongkir`/`total` bisa `null` bila tarif belum bisa
+  dihitung sistem (lihat `catatan`). Rate limit 30/menit per IP.
+- `POST /api/v1/pesanan` → body `{agentId, items, mode, pelanggan, alamat?,
+  idempotencyKey?}`. Membuat pesanan status `tunggu_bayar`, `metodeBayar`
+  `qris_toko`. `pelanggan` = nomor WA (digit, 9-15). `alamat` wajib saat
+  `seller_delivery` (min 5 karakter). Bila `ongkir` `null` → `400` (arahkan ke
+  WhatsApp). Balasan `{data: {id, kode, total, ongkir, status, mode, labelMode,
+  bayar{qrisNama,qrisUrl}}}`. `idempotencyKey` unik: kirim ulang key yang sama
+  mengembalikan pesanan yang sama (tanpa membuat baru). Rate limit 6 per 10
+  menit per IP.
+- **Aturan mode kirim:** `self_pickup` ongkir 0; `seller_delivery` pakai
+  `TokoSetting.ongkirSellerFlat` (null → belum bisa dihitung); `courier_instant`
+  belum punya sumber tarif di obrool (modul logistik yang ada hanya ekspedisi
+  binderbyte), jadi selalu diarahkan ke WhatsApp, bukan ditebak.
+- **Stok tidak dikurangi saat pesanan dibuat.** Stok berkurang saat `paid`
+  (lewat `terapkanPesananPaid`), jadi pesanan yang tak pernah dibayar tidak
+  mengunci stok.
+- Tokowa: BFF publik `POST /api/pesan/quote` + `POST /api/pesan`, form "Pesan
+  dari web" di `/produk/[id]`. Setelah pesanan dibuat pembeli diarahkan ke
+  `/lacak?kode=..&hp=..` (4 angka terakhir terisi otomatis). Bukti bayar dikirim
+  lewat WhatsApp, tidak ada unggah berkas di web.
 
 ## 5. Keputusan yang sudah dikunci
 
@@ -159,35 +196,44 @@ pernah dari janji chat.
 - **Pembayaran pesanan web: QRIS statis toko + verifikasi seller.** Tidak pakai
   paylink iPaymu untuk jalur ini. Pembeli membayar ke QRIS toko, seller
   memverifikasi lewat aksi `konfirmasi` (`tunggu_verifikasi` → `paid`).
+- **Bukti bayar lewat WhatsApp, tanpa unggah di web.** R2 belum dikonfigurasi,
+  jadi tidak ada alur upload berkas untuk pembeli.
+- **Tiga mode kirim, tapi kurir instan belum otomatis.** `self_pickup` dan
+  `seller_delivery` (tarif flat owner) sudah bisa dihitung; `courier_instant`
+  diarahkan ke WhatsApp sampai ada sumber tarif kurir.
+- **Stok berkurang saat `paid`, bukan saat pesanan dibuat.** Satu jalur:
+  `terapkanPesananPaid` (idempoten), dipakai webhook pembayaran dan aksi
+  `konfirmasi` seller.
 - **Pelacakan pembeli butuh kode pesanan + 4 angka terakhir nomor WA.** Bukan
   id saja, supaya tautan yang tersebar tidak membuka isi pesanan orang lain.
 - **WA number belum diatur.** Semua tombol WhatsApp nonaktif dengan
   `title="Nomor WhatsApp belum diatur"`. Ini keadaan yang disengaja, bukan bug.
 
-## 6. F4 (belum ada di kode)
+## 6. F4 (sisa)
 
 1. **Chat WABA sebagai jalur belanja.** Nomor WABA platform → webhook Meta →
    agent obrool. Tokowa tidak di jalur chat. Dua opsi: obrool memasang webhook
    sendiri, atau Tokowa hanya pass-through tanpa mengubah body.
-2. **Quote dan pesanan web.** `POST /orders/quote` dengan tiga mode
-   (`courier_instant | seller_delivery | self_pickup`), `POST /orders` dengan
-   idempotency, lalu `GET /orders/{id}`. `courier_instant` masih butuh sumber
-   estimasi ongkir kurir yang belum ada di obrool.
+2. **Album multi-produk di web.** Form pemesanan sekarang satu produk per
+   pesanan; keranjang lintas produk di Tokowa belum ada.
 3. **Pengecualian status.** Pembatalan pembeli, sengketa, dan retur
    (`TokoRetur` sudah ada di schema) perlu endpoint dan UI.
 4. **Webhook balik obrool → Tokowa** untuk `order.status_changed` dan
    `dispute.decided`, signed HMAC, kalau polling mulai berat.
 
-Sudah selesai lebih dulu: **pelacakan pesanan pembeli** (bagian 4.8), read-only,
-tanpa menyentuh uang.
+Sudah selesai lebih dulu: **pelacakan pesanan pembeli** (bagian 4.8) dan
+**quote + buat pesanan web** (bagian 4.9). Sumber tarif `courier_instant` masih
+terbuka (bagian 7).
 
 ## 7. Masih terbuka
 
 - Media storage: satu bucket R2 untuk produk dan KYC (mempengaruhi alur upload)?
+  Termasuk kemungkinan unggah bukti bayar di web kalau R2 siap.
 - Sumber estimasi ongkir untuk mode `courier_instant`.
 - Normalisasi endpoint: kapan `/api/agents/*` pindah ke `v1/*` dan envelope
   diseragamkan ke `{data}`.
-- Idempotency window untuk `POST /orders` (usulan 24 jam).
+- Kedaluwarsa `idempotencyKey` `POST /api/v1/pesanan` (kini unik selamanya,
+  usulan window 24 jam).
 - `message` error: tetap Indonesia + `code` stabil seperti sekarang, atau
   Tokowa melakukan i18n sendiri dari `code`.
 
@@ -203,3 +249,4 @@ terulang:
 | Decide KYC body `{status}` | `{keputusan: "diterima"|"ditolak", catatan}` |
 | Proxy Tokowa meneruskan `/v1/...` | obrool butuh prefiks `/api`, jadi BFF menempel `/api` |
 | `export const GET = core` di route handler | Next 16.3.1 butuh `export async function GET` |
+| Aksi `konfirmasi` update status mentah | wajib `terapkanPesananPaid` agar stok + ledger ikut |

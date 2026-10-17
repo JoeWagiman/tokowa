@@ -6,9 +6,9 @@ export const metadata = { title: "Lacak pesanan" };
 export default async function Lacak({
   searchParams,
 }: {
-  searchParams: Promise<{ kode?: string }>;
+  searchParams: Promise<{ kode?: string; hp?: string }>;
 }) {
-  const { kode } = await searchParams;
+  const { kode, hp } = await searchParams;
 
   return (
     <>
@@ -20,7 +20,7 @@ export default async function Lacak({
             Masukkan kode pesanan dari chat WhatsApp dan 4 angka terakhir nomor yang kamu
             pakai saat memesan. Riwayat dan status tampil apa adanya dari toko.
           </p>
-          <FormLacak kodeAwal={(kode ?? "").trim()} />
+          <FormLacak kodeAwal={(kode ?? "").trim()} hpAwal={(hp ?? "").replace(/\D/g, "").slice(-4)} />
         </div>
       </main>
       <Footer />

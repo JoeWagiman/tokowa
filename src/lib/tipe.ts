@@ -19,6 +19,7 @@ export type LacakPesanan = {
   pelangganMask: string | null;
   items: { nama: string; qty: number; satuan: string; harga: number }[];
   langkah: LacakLangkah[];
+  pengiriman: { mode: string; ongkir: number; alamat: string | null } | null;
   bayar: { metode: string | null; qrisNama: string | null; qrisUrl: string | null } | null;
   dibuatAt: string;
   diperbaruiAt: string;

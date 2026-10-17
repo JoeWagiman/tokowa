@@ -14,6 +14,7 @@ type Setting = {
   hariBuka: string | null;
   jendelaReturHari: number;
   ongkirRetur: string | null;
+  ongkirSellerFlat: number | null;
   qrisStatisNama: string | null;
   qrisStatisUrl: string | null;
 };

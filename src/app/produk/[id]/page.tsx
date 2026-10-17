@@ -1,5 +1,6 @@
 import { TopNav, Footer } from "@/components/site";
 import { KartuProduk } from "@/components/kartu-produk";
+import { FormPesan } from "@/components/form-pesan";
 import { obrool, ApiError } from "@/lib/api";
 import { rp, stokStatus, stokLabel } from "@/lib/format";
 import { waLink } from "@/lib/api";
@@ -93,8 +94,10 @@ function Isi({ p }: { p: ProdukDetail }) {
               Tanya ketersediaan di WhatsApp
             </button>
           )}
-          <span className="cta-note">Pembelian lanjut di WhatsApp, dibantu agent.</span>
+          <span className="cta-note">Pesan langsung di web, atau tanya dulu lewat WhatsApp.</span>
         </div>
+
+        <FormPesan produkId={p.id} agentId={p.agentId} nama={p.nama} stok={p.stok} />
       </aside>
     </article>
   );
