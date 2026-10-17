@@ -6,10 +6,28 @@ import { rp, stokStatus, stokLabel } from "@/lib/format";
 import { waLink } from "@/lib/api";
 import type { ProdukDetail } from "@/lib/tipe";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 const chipKelas = { habis: "chip chip-muted", menipis: "chip chip-warn", ada: "chip chip-ok" } as const;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const p = await obrool<ProdukDetail>(`/api/v1/catalog/products/${encodeURIComponent(id)}`);
+    return {
+      title: `${p.nama} | ${p.toko}`,
+      description: `${p.nama} ${rp(p.harga)} di ${p.toko}. Pesan dari web, bayar QRIS toko, ambil di toko atau diantar.`,
+    };
+  } catch {
+    return { title: "Produk" };
+  }
+}
 
 export default async function HalamanProduk({
   params,
@@ -97,7 +115,15 @@ function Isi({ p }: { p: ProdukDetail }) {
           <span className="cta-note">Pesan langsung di web, atau tanya dulu lewat WhatsApp.</span>
         </div>
 
-        <FormPesan produkId={p.id} agentId={p.agentId} nama={p.nama} stok={p.stok} />
+        <FormPesan
+          produkId={p.id}
+          agentId={p.agentId}
+          nama={p.nama}
+          stok={p.stok}
+          toko={p.toko}
+          harga={p.harga}
+          satuan={p.satuan[0]?.nama ?? "pcs"}
+        />
       </aside>
     </article>
   );

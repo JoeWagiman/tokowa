@@ -184,6 +184,13 @@ ulang dari DB, tidak pernah dari body.
   dari web" di `/produk/[id]`. Setelah pesanan dibuat pembeli diarahkan ke
   `/lacak?kode=..&hp=..` (4 angka terakhir terisi otomatis). Bukti bayar dikirim
   lewat WhatsApp, tidak ada unggah berkas di web.
+- **Keranjang multi-produk (sisi Tokowa, tanpa endpoint baru).** Keranjang
+  disimpan di `localStorage` (`tokowa-keranjang-v1`) dan dikirim utuh sebagai
+  `items[]` ke `quote`/`pesan` yang memang sudah menerima 1-20 baris. Satu
+  keranjang dikunci ke satu toko: menambah produk dari agent lain ditolak dengan
+  pesan jelas, karena satu pesanan hanya milik satu agent. Tombol "Tambah ke
+  keranjang" ada di halaman produk, halaman `/keranjang` mengatur jumlah/hapus
+  lalu checkout. Jumlah dibatasi `stok` produk dan `99`.
 
 ### 4.10 Konfirmasi bayar pembeli (publik, tanpa auth)
 Menutup jeda antara pesanan web dibuat dan verifikasi seller. Pembeli menyatakan
@@ -221,6 +228,9 @@ sudah membayar; sistem TIDAK memeriksa uang dan TIDAK mengirim bukti berkas.
 - **Pembeli menandai "sudah bayar" dari web, tanpa bukti berkas.** Itu hanya
   memindahkan pesanan ke `tunggu_verifikasi` dan memberi tahu toko; keputusan
   uang tetap di seller lewat aksi `konfirmasi`.
+- **Satu pesanan hanya untuk satu toko.** Keranjang lintas toko ditolak di web
+  (bukan digabung belakangan), karena `TokoPesanan` terikat satu `agentId` dan
+  ongkir per toko.
 - **Tiga mode kirim, tapi kurir instan belum otomatis.** `self_pickup` dan
   `seller_delivery` (tarif flat owner) sudah bisa dihitung; `courier_instant`
   diarahkan ke WhatsApp sampai ada sumber tarif kurir.
@@ -237,16 +247,15 @@ sudah membayar; sistem TIDAK memeriksa uang dan TIDAK mengirim bukti berkas.
 1. **Chat WABA sebagai jalur belanja.** Nomor WABA platform → webhook Meta →
    agent obrool. Tokowa tidak di jalur chat. Dua opsi: obrool memasang webhook
    sendiri, atau Tokowa hanya pass-through tanpa mengubah body.
-2. **Album multi-produk di web.** Form pemesanan sekarang satu produk per
-   pesanan; keranjang lintas produk di Tokowa belum ada.
-3. **Pengecualian status.** Pembatalan pembeli, sengketa, dan retur
+2. **Pengecualian status.** Pembatalan pembeli, sengketa, dan retur
    (`TokoRetur` sudah ada di schema) perlu endpoint dan UI.
-4. **Webhook balik obrool → Tokowa** untuk `order.status_changed` dan
+3. **Webhook balik obrool → Tokowa** untuk `order.status_changed` dan
    `dispute.decided`, signed HMAC, kalau polling mulai berat.
 
-Sudah selesai lebih dulu: **pelacakan pesanan pembeli** (bagian 4.8) dan
-**quote + buat pesanan web** (bagian 4.9). Sumber tarif `courier_instant` masih
-terbuka (bagian 7).
+Sudah selesai lebih dulu: **pelacakan pesanan pembeli** (bagian 4.8),
+**quote + buat pesanan web** (bagian 4.9), **konfirmasi bayar pembeli**
+(bagian 4.10), dan **keranjang multi-produk** (bagian 4.9, sisi Tokowa).
+Sumber tarif `courier_instant` masih terbuka (bagian 7).
 
 ## 7. Masih terbuka
 

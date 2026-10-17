@@ -1,114 +1,85 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { rp } from "@/lib/format";
-
-type Mode = "self_pickup" | "seller_delivery" | "courier_instant";
-
-const PILIHAN: { nilai: Mode; label: string }[] = [
-  { nilai: "self_pickup", label: "Ambil di toko" },
-  { nilai: "seller_delivery", label: "Diantar toko" },
-  { nilai: "courier_instant", label: "Kurir instan" },
-];
-
-type Kutipan = {
-  subtotal: number;
-  ongkir: number | null;
-  total: number | null;
-  catatan: string | null;
-};
+import { tambahKeranjang } from "@/lib/keranjang";
+import {
+  type ModeKirim,
+  PILIHAN_MODE,
+  kirimPesanan,
+  kunciIdempotensi,
+  useKutipan,
+  validasiPesanan,
+} from "@/lib/pesan-klien";
 
 export function FormPesan({
   produkId,
   agentId,
   nama,
   stok,
+  toko,
+  harga,
+  satuan,
 }: {
   produkId: string;
   agentId: string;
   nama: string;
   stok: number;
+  toko: string;
+  harga: number;
+  satuan: string;
 }) {
   const router = useRouter();
   const habis = stok <= 0;
 
   const [qty, setQty] = useState(1);
-  const [mode, setMode] = useState<Mode>("self_pickup");
+  const [mode, setMode] = useState<ModeKirim>("self_pickup");
   const [pelanggan, setPelanggan] = useState("");
   const [alamat, setAlamat] = useState("");
-  const [kutipan, setKutipan] = useState<Kutipan | null>(null);
-  const [memuat, setMemuat] = useState(false);
-  const [galatKutipan, setGalatKutipan] = useState<string | null>(null);
   const [sibuk, setSibuk] = useState(false);
   const [pesan, setPesan] = useState<string | null>(null);
-  const [kunci] = useState(() => `web-${produkId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
+  const [pesanKeranjang, setPesanKeranjang] = useState<string | null>(null);
+  const [kunci] = useState(() => kunciIdempotensi(produkId));
 
-  useEffect(() => {
-    if (habis) return;
-    let batal = false;
-    const t = setTimeout(async () => {
-      setMemuat(true);
-      try {
-        const res = await fetch("/api/pesan/quote", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ agentId, items: [{ produkId, qty }], mode }),
-        });
-        const body = await res.json().catch(() => null);
-        if (batal) return;
-        if (!res.ok) {
-          setGalatKutipan(body?.error?.message ?? "Tidak bisa menghitung total.");
-          setKutipan(null);
-        } else {
-          setGalatKutipan(null);
-          setKutipan(body.data as Kutipan);
-        }
-      } catch {
-        if (!batal) {
-          setGalatKutipan("Masalah ke server. Coba lagi nanti.");
-          setKutipan(null);
-        }
-      } finally {
-        if (!batal) setMemuat(false);
-      }
-    }, 250);
-    return () => {
-      batal = true;
-      clearTimeout(t);
-    };
-  }, [agentId, produkId, qty, mode, habis]);
+  const { kutipan, memuat, galat } = useKutipan(agentId, habis ? [] : [{ produkId, qty }], mode);
+
+  function keKeranjang() {
+    const hasil = tambahKeranjang({ produkId, agentId, toko, nama, harga, satuan, stok }, qty);
+    if (!hasil.ok) {
+      setPesanKeranjang(
+        `Keranjangmu masih berisi barang dari ${hasil.toko}. Satu pesanan hanya untuk satu toko: selesaikan atau kosongkan keranjang dulu.`
+      );
+      return;
+    }
+    setPesanKeranjang(`Masuk keranjang (${hasil.jumlah} barang).`);
+  }
 
   async function buatPesanan(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPesan(null);
-    const digit = pelanggan.replace(/\D/g, "");
-    if (digit.length < 9 || digit.length > 15) {
-      setPesan("Nomor WhatsApp belum benar. Contoh: 081234567890.");
-      return;
-    }
-    if (mode === "seller_delivery" && alamat.trim().length < 5) {
-      setPesan("Isi alamat pengiriman dulu, minimal 5 karakter.");
+    const salah = validasiPesanan(pelanggan, mode, alamat);
+    if (salah) {
+      setPesan(salah);
       return;
     }
     setSibuk(true);
-    try {
-      const res = await fetch("/api/pesan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId, items: [{ produkId, qty }], mode, pelanggan, alamat, idempotencyKey: kunci }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) {
-        setPesan(body?.error?.message ?? "Pesanan gagal dibuat.");
-        return;
-      }
-      router.push(`/lacak?kode=${encodeURIComponent(body.data.kode)}&hp=${digit.slice(-4)}`);
-    } catch {
-      setPesan("Masalah ke server. Coba lagi nanti.");
-    } finally {
-      setSibuk(false);
+    const hasil = await kirimPesanan({
+      agentId,
+      items: [{ produkId, qty }],
+      mode,
+      pelanggan,
+      alamat,
+      idempotencyKey: kunci,
+    });
+    setSibuk(false);
+    if (!hasil.ok) {
+      setPesan(hasil.pesan);
+      return;
     }
+    const digit = pelanggan.replace(/\D/g, "");
+    router.push(`/lacak?kode=${encodeURIComponent(hasil.kode)}&hp=${digit.slice(-4)}`);
   }
 
   if (habis) {
@@ -122,8 +93,7 @@ export function FormPesan({
     );
   }
 
-  const total = kutipan?.total ?? null;
-  const bisaKirim = !sibuk && !memuat && total !== null;
+  const bisaKirim = !sibuk && !memuat && kutipan?.total != null;
 
   return (
     <form className="pesan-box" onSubmit={buatPesanan}>
@@ -156,7 +126,7 @@ export function FormPesan({
 
       <fieldset className="pilihan-kirim">
         <legend>Cara terima</legend>
-        {PILIHAN.map((p) => (
+        {PILIHAN_MODE.map((p) => (
           <label key={p.nilai} className={mode === p.nilai ? "pill aktif" : "pill"}>
             <input
               type="radio"
@@ -185,7 +155,7 @@ export function FormPesan({
       )}
 
       <div className="ringkas-total">
-        {galatKutipan && <p style={{ color: "var(--danger-ink)" }}>{galatKutipan}</p>}
+        {galat && <p style={{ color: "var(--danger-ink)" }}>{galat}</p>}
         {kutipan && (
           <>
             <div className="baris-total">
@@ -203,13 +173,28 @@ export function FormPesan({
             </div>
           </>
         )}
-        {!kutipan && !galatKutipan && <p style={{ color: "var(--muted)" }}>Menghitung total…</p>}
+        {!kutipan && !galat && <p style={{ color: "var(--muted)" }}>Menghitung total…</p>}
       </div>
 
       <button className="btn" type="submit" disabled={!bisaKirim}>
         {sibuk ? "Membuat pesanan…" : "Buat pesanan"}
       </button>
-      <p className="cta-note">Bayar dengan QRIS toko setelah pesanan dibuat. Kode pesanan muncul di halaman lacak.</p>
+      <p className="cta-note">
+        Bayar dengan QRIS toko setelah pesanan dibuat. Kode pesanan muncul di halaman lacak.
+      </p>
+
+      <button className="btn btn-ghost" type="button" onClick={keKeranjang}>
+        Tambah ke keranjang
+      </button>
+      {pesanKeranjang && (
+        <p style={{ color: "var(--muted)", fontSize: 14 }}>
+          {pesanKeranjang}{" "}
+          <Link href="/keranjang" style={{ color: "var(--accent-ink)", fontWeight: 600 }}>
+            Lihat keranjang
+          </Link>
+        </p>
+      )}
+
       {pesan && (
         <p
           style={{

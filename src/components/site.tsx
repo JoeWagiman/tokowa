@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LogoMark } from "./logo-mark";
+import { PenandaKeranjang } from "./penanda-keranjang";
 import { waLink } from "@/lib/api";
 
 export function TopNav() {
@@ -15,6 +16,7 @@ export function TopNav() {
           <Link href="/katalog">Katalog</Link>
           <Link href="/lacak">Lacak pesanan</Link>
         </nav>
+        <PenandaKeranjang />
         {wa ? (
           <a className="btn" href={wa} target="_blank" rel="noreferrer">
             Chat WhatsApp

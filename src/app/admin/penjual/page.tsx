@@ -95,7 +95,7 @@ export default async function HalamanAdminPenjual({
                   <tr key={a.agentId}>
                     <td>{a.nama}</td>
                     <td>
-                      {a.pemilik ?? "—"}
+                      {a.pemilik ?? "Belum ada"}
                       <br />
                       <span style={{ color: "var(--muted)", fontSize: 12 }}>{a.email ?? ""}</span>
                     </td>
