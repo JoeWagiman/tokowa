@@ -28,13 +28,37 @@ const labelKirim: Record<string, string> = {
   self_pickup: "Ambil di toko",
 };
 
+const ALASAN_RETUR = [
+  { nilai: "rusak", label: "Barang rusak" },
+  { nilai: "basi", label: "Barang basi atau kedaluwarsa" },
+  { nilai: "salah", label: "Salah kirim barang" },
+  { nilai: "tidak_sesuai", label: "Tidak sesuai pesanan" },
+  { nilai: "berubah_pikiran", label: "Berubah pikiran" },
+  { nilai: "lain", label: "Alasan lain" },
+];
+
+const labelOngkirRetur: Record<string, string> = {
+  pembeli: "ongkir retur ditanggung pembeli",
+  toko: "ongkir retur ditanggung toko",
+  bagi_dua: "ongkir retur dibagi dua",
+};
+
+const chipRetur: Record<string, string> = {
+  diajukan: "chip chip-warn",
+  disetujui: "chip chip-warn",
+  ditolak: "chip chip-muted",
+  barang_diterima: "chip chip-ok",
+  refund: "chip chip-ok",
+  selesai: "chip chip-ok",
+};
+
 export function FormLacak({ kodeAwal, hpAwal }: { kodeAwal: string; hpAwal: string }) {
   const [kode, setKode] = useState(kodeAwal);
   const [hp, setHp] = useState(hpAwal);
   const [muat, setMuat] = useState(false);
   const [galat, setGalat] = useState<string | null>(null);
   const [hasil, setHasil] = useState<LacakPesanan | null>(null);
-  const [pesanBayar, setPesanBayar] = useState<string | null>(null);
+  const [pesan, setPesan] = useState<string | null>(null);
 
   async function cari(kodeV: string, hpV: string) {
     setMuat(true);
@@ -64,14 +88,14 @@ export function FormLacak({ kodeAwal, hpAwal }: { kodeAwal: string; hpAwal: stri
 
   function kirim(e: React.FormEvent) {
     e.preventDefault();
-    setPesanBayar(null);
+    setPesan(null);
     void cari(kode, hp);
   }
 
   function ulangi() {
     setHasil(null);
     setGalat(null);
-    setPesanBayar(null);
+    setPesan(null);
     setHp("");
   }
 
@@ -125,8 +149,8 @@ export function FormLacak({ kodeAwal, hpAwal }: { kodeAwal: string; hpAwal: stri
           <KartuLacak
             p={hasil}
             hp={hp}
-            pesanBayar={pesanBayar}
-            onPesanBayar={setPesanBayar}
+            pesan={pesan}
+            onPesan={setPesan}
             onSegarkan={() => void cari(kode, hp)}
             onUlangi={ulangi}
           />
@@ -139,20 +163,66 @@ export function FormLacak({ kodeAwal, hpAwal }: { kodeAwal: string; hpAwal: stri
 function KartuLacak({
   p,
   hp,
-  pesanBayar,
-  onPesanBayar,
+  pesan,
+  onPesan,
   onSegarkan,
   onUlangi,
 }: {
   p: LacakPesanan;
   hp: string;
-  pesanBayar: string | null;
-  onPesanBayar: (pesan: string | null) => void;
+  pesan: string | null;
+  onPesan: (pesan: string | null) => void;
   onSegarkan: () => void;
   onUlangi: () => void;
 }) {
   const [kirim, setKirim] = useState(false);
   const [galatBayar, setGalatBayar] = useState<string | null>(null);
+  const [tanyaBatal, setTanyaBatal] = useState(false);
+  const [sibuk, setSibuk] = useState(false);
+  const [galatAksi, setGalatAksi] = useState<string | null>(null);
+  const [bukaRetur, setBukaRetur] = useState(false);
+  const [alasan, setAlasan] = useState(ALASAN_RETUR[0].nilai);
+  const [catatan, setCatatan] = useState("");
+
+  async function minta(endpoint: string, isi: Record<string, unknown>) {
+    setSibuk(true);
+    setGalatAksi(null);
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kode: p.id, hp, ...isi }),
+        cache: "no-store",
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setGalatAksi(body?.error?.message ?? "Permintaan tidak bisa diproses. Coba lagi.");
+        return false;
+      }
+      onPesan(body?.data?.pesan ?? "Permintaan diteruskan ke toko.");
+      onSegarkan();
+      return true;
+    } catch {
+      setGalatAksi("Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.");
+      return false;
+    } finally {
+      setSibuk(false);
+    }
+  }
+
+  async function batalkanPesanan() {
+    const berhasil = await minta("/api/lacak/batal", {});
+    if (berhasil) setTanyaBatal(false);
+  }
+
+  async function kirimRetur(e: React.FormEvent) {
+    e.preventDefault();
+    const berhasil = await minta("/api/lacak/retur", { alasan, catatan: catatan.trim() || null });
+    if (berhasil) {
+      setBukaRetur(false);
+      setCatatan("");
+    }
+  }
 
   async function tandaiSudahBayar() {
     setKirim(true);
@@ -169,7 +239,7 @@ function KartuLacak({
         setGalatBayar(body?.error?.message ?? "Tidak bisa menandai pembayaran. Coba lagi.");
         return;
       }
-      onPesanBayar(body?.data?.pesan ?? "Konfirmasi diteruskan ke toko.");
+      onPesan(body?.data?.pesan ?? "Konfirmasi diteruskan ke toko.");
       onSegarkan();
     } catch {
       setGalatBayar("Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.");
@@ -205,9 +275,9 @@ function KartuLacak({
         </p>
       )}
 
-      {pesanBayar && (
+      {pesan && (
         <p className="pesan-box" style={{ display: "block" }}>
-          {pesanBayar}
+          {pesan}
         </p>
       )}
 
@@ -255,6 +325,118 @@ function KartuLacak({
         <p style={{ color: "var(--muted)", marginTop: 16 }}>
           Pembayaranmu sedang diperiksa toko. Status akan berubah setelah toko memverifikasi.
         </p>
+      )}
+
+      {galatAksi && (
+        <p style={{ color: "var(--danger)", fontSize: 14, marginTop: 12 }} role="alert">
+          {galatAksi}
+        </p>
+      )}
+
+      {p.bisaBatal && (
+        <div className="lacak-aksi">
+          {!tanyaBatal ? (
+            <button className="btn btn-ghost" type="button" onClick={() => setTanyaBatal(true)}>
+              Batalkan pesanan
+            </button>
+          ) : (
+            <div>
+              <p style={{ fontWeight: 600 }}>
+                Yakin batalkan pesanan #{p.kode}? Barang tidak jadi dipesan.
+              </p>
+              <p style={{ color: "var(--muted)", fontSize: 14 }}>
+                Belum ada uang yang berpindah, jadi tidak ada refund yang perlu diurus.
+              </p>
+              <div className="baris-aksi">
+                <button className="btn" type="button" onClick={() => void batalkanPesanan()} disabled={sibuk} aria-busy={sibuk}>
+                  {sibuk ? "Membatalkan" : "Ya, batalkan"}
+                </button>
+                <button className="btn btn-ghost" type="button" onClick={() => setTanyaBatal(false)} disabled={sibuk}>
+                  Jangan, simpan pesanan
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {p.retur && (
+        <div className="lacak-retur">
+          <div className="lacak-head">
+            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Retur {p.retur.kode}</h3>
+            <span className={chipRetur[p.retur.status] ?? "chip chip-muted"}>{p.retur.statusLabel}</span>
+          </div>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>Alasan: {p.retur.alasanLabel}</p>
+          {p.retur.refundTotal > 0 && (
+            <p style={{ fontSize: 14, marginTop: 4 }}>
+              Refund tercatat: <strong>{rp(p.retur.refundTotal)}</strong>
+              {p.retur.refundCatatan ? ` (${p.retur.refundCatatan})` : ""}
+            </p>
+          )}
+          {p.retur.status === "disetujui" && (
+            <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 4 }}>
+              Kirim barang kembali ke toko. Koordinasi lewat WhatsApp supaya alamat dan
+              ongkirnya jelas ({labelOngkirRetur[p.ongkirRetur] ?? p.ongkirRetur}).
+            </p>
+          )}
+          {p.retur.status === "ditolak" && (
+            <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 4 }}>
+              Tanya alasan penolakan lewat WhatsApp. Kalau tidak sepakat, toko bisa
+              meninjau ulang.
+            </p>
+          )}
+        </div>
+      )}
+
+      {p.bisaRetur && !bukaRetur && (
+        <div className="lacak-aksi">
+          <button className="btn btn-ghost" type="button" onClick={() => setBukaRetur(true)}>
+            Ajukan retur
+          </button>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>
+            Batas pengajuan {p.jendelaReturHari} hari sejak pesanan dibuat.
+          </p>
+        </div>
+      )}
+
+      {p.bisaRetur && bukaRetur && (
+        <form className="lacak-retur" onSubmit={kirimRetur}>
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Ajukan retur</h3>
+          <label htmlFor="alasan-retur">Alasan</label>
+          <select
+            id="alasan-retur"
+            name="alasan"
+            value={alasan}
+            onChange={(e) => setAlasan(e.target.value)}
+          >
+            {ALASAN_RETUR.map((a) => (
+              <option key={a.nilai} value={a.nilai}>
+                {a.label}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="catatan-retur">Catatan untuk toko (opsional)</label>
+          <textarea
+            id="catatan-retur"
+            name="catatan"
+            value={catatan}
+            onChange={(e) => setCatatan(e.target.value)}
+            maxLength={300}
+            rows={3}
+            placeholder="Contoh: kemasan penyok, isi bocor"
+          />
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>
+            Toko memutuskan pengajuan ini. {labelOngkirRetur[p.ongkirRetur] ?? p.ongkirRetur}.
+          </p>
+          <div className="baris-aksi">
+            <button className="btn" type="submit" disabled={sibuk} aria-busy={sibuk}>
+              {sibuk ? "Mengirim" : "Kirim pengajuan"}
+            </button>
+            <button className="btn btn-ghost" type="button" onClick={() => setBukaRetur(false)} disabled={sibuk}>
+              Urungkan
+            </button>
+          </div>
+        </form>
       )}
 
       <h3 style={{ fontSize: 16, fontWeight: 700, marginTop: 24, marginBottom: 8 }}>Rincian</h3>

@@ -1,9 +1,10 @@
 # Kontrak API Tokowa ↔ obrool
 
 Status: **F1–F3 terimplementasi dan sudah lewat uji ujung ke ujung di branch
-dev obrool.** F4 sebagian: pelacakan pesanan pembeli (4.8) dan pemesanan web
-quote + buat pesanan (4.9) sudah jalan. Sisanya (pengecualian status,
-passthrough WABA) masih rencana. Dokumen ini mencatat endpoint yang benar-benar
+dev obrool.** F4 sebagian: pelacakan pesanan pembeli (4.8), pemesanan web
+quote + buat pesanan (4.9), keranjang multi-produk, dan pembatalan + retur
+(4.11) sudah jalan. Sisanya (passthrough WABA, webhook balik) masih rencana.
+Dokumen ini mencatat endpoint yang benar-benar
 ada di kode obrool (`D:\Project\obrool`), bukan usulan lagi.
 
 Aturan yang mengikat adalah pembagian tanggung jawab dan nama endpoint. Field
@@ -144,8 +145,14 @@ pernah dari janji chat.
   terakhir nomor WhatsApp pembeli. Rate limit 12 percobaan per menit per IP+kode.
   - Cocok → `{data: {id, kode, toko, status, statusLabel, total, metodeBayar,
     pelangganMask, items[], langkah[{status,label,keadaan}],
-    pengiriman{mode,ongkir,alamat}, bayar, dibuatAt, diperbaruiAt}}`.
+    pengiriman{mode,ongkir,alamat}, bayar, bisaBatal, bisaRetur,
+    jendelaReturHari, ongkirRetur, retur, dibuatAt, diperbaruiAt}}`.
     `pengiriman` `null` bila pesanan lama belum punya mode kirim.
+  - `bisaBatal` = status `tunggu_bayar`/`tunggu_verifikasi`. `bisaRetur` =
+    status `paid`/`kirim`/`selesai`, belum lewat `jendelaReturHari` sejak
+    `createdAt`, dan belum ada retur hidup. `ongkirRetur` = `pembeli|toko|
+    bagi_dua` dari setting toko. `retur` = `{kode, status, statusLabel, alasan,
+    alasanLabel, refundTotal, refundCatatan, dibuatAt, diperbaruiAt}` atau `null`.
   - Tidak cocok → `404 not_found` dengan pesan yang tidak membocorkan apakah
     pesanan ada. Kode salah format → `400`.
   - Nomor pembeli dikembalikan termask (`••••6789`). Bukti bayar dan paylink tidak
@@ -212,6 +219,37 @@ sudah membayar; sistem TIDAK memeriksa uang dan TIDAK mengirim bukti berkas.
   "Menunggu pemeriksaan toko").
 - Stok tetap utuh di langkah ini; pengurangan hanya saat seller `konfirmasi`.
 
+### 4.11 Pembatalan & retur (publik + penjual)
+Pengecualian status setelah pesanan dibuat. Verifikasi pembeli sama seperti lacak
+(kode 6 huruf terakhir id atau id penuh + 4 angka terakhir nomor WA).
+
+- `POST /api/v1/pesanan/batal` → body `{kode, hp}`. Hanya status `tunggu_bayar`/
+  `tunggu_verifikasi` yang bisa dibatalkan; jadi `batal`. Stok tidak tersentuh
+  (belum pernah berkurang). Batal ulang / status tidak bisa dibatalkan → `409`.
+  Balasan `{data: {id, kode, status, pesan}}`. Rate limit 10 per 10 menit per IP.
+- `POST /api/v1/pesanan/retur` → body `{kode, hp, alasan, catatan?}`. `alasan` ∈
+  `rusak | basi | salah | tidak_sesuai | berubah_pikiran | lain` (di luar itu →
+  `400`). Hanya status `paid`/`kirim`/`selesai` dan masih dalam
+  `jendelaReturHari` sejak `createdAt`. Satu pengajuan hidup per pesanan (sudah
+  ada → `409`). Membuat `TokoRetur` status `diajukan`, memberi tahu owner toko.
+  Balasan `{data: {returKode, status, pesan}}`. Rate limit 8 per 10 menit per IP.
+- `GET /api/v1/seller/retur?agentId=&status=` (auth user, lewat agent). Tanpa
+  `status` → daftar aktif (`diajukan|disetujui|barang_diterima`); `status=riwayat`
+  → (`ditolak|selesai`). Nomor pembeli di-mask. Balasan `{data: {items[]}}`.
+- `POST /api/v1/seller/retur/[id]/aksi` (auth user, hanya pemilik agent) → body
+  `{aksi: setuju|tolak|terima_barang|refund, catatan?, layakJual?, nominal?}`.
+  Alur: `diajukan` → `setuju`/`tolak`; `disetujui` → `terima_barang`
+  (`layakJual` true mengembalikan stok lewat `catatKartuStok` sebab `retur_masuk`,
+  false tidak) → `barang_diterima` → `refund` (`nominal` yang diisi seller, boleh
+  sebagian, tidak harus sama dengan total pesanan) → `selesai` + ledger
+  `decrement`. Aksi yang tidak sesuai status → `409`. Bukan pemilik → `403`.
+- Tokowa: BFF publik `POST /api/lacak/batal`, `POST /api/lacak/retur`; tombol
+  "Batalkan pesanan" (konfirmasi dua langkah) dan form "Ajukan retur" di kartu
+  `/lacak`. Halaman penjual `/toko-saya/[agentId]/retur` (daftar aktif + riwayat)
+  dengan aksi setuju/tolak/terima barang/refund. Keputusan uang dan kepemilikan
+  bukti tetap di seller; web tidak pernah memindahkan uang.
+- Belum ada model sengketa: kasus barang bermasalah ditutup lewat retur.
+
 ## 5. Keputusan yang sudah dikunci
 
 - **KYC satu backend.** Tidak ada state KYC yang disimpan di Tokowa; antrean
@@ -239,6 +277,12 @@ sudah membayar; sistem TIDAK memeriksa uang dan TIDAK mengirim bukti berkas.
   `konfirmasi` seller.
 - **Pelacakan pembeli butuh kode pesanan + 4 angka terakhir nomor WA.** Bukan
   id saja, supaya tautan yang tersebar tidak membuka isi pesanan orang lain.
+- **Refund retur = nominal yang diisi seller, boleh sebagian.** Uang di tangan
+  seller (transfer manual), sistem hanya mencatat dan menyesuaikan ledger.
+  Penolakan tidak otomatis mengubah stok; pengembalian stok hanya saat seller
+  menandai barang layak jual.
+- **Sengketa ditunda.** Belum ada model `Dispute`; retur menutup kasus barang
+  bermasalah sampai ada alur sengketa yang jelas.
 - **WA number belum diatur.** Semua tombol WhatsApp nonaktif dengan
   `title="Nomor WhatsApp belum diatur"`. Ini keadaan yang disengaja, bukan bug.
 
@@ -247,14 +291,13 @@ sudah membayar; sistem TIDAK memeriksa uang dan TIDAK mengirim bukti berkas.
 1. **Chat WABA sebagai jalur belanja.** Nomor WABA platform → webhook Meta →
    agent obrool. Tokowa tidak di jalur chat. Dua opsi: obrool memasang webhook
    sendiri, atau Tokowa hanya pass-through tanpa mengubah body.
-2. **Pengecualian status.** Pembatalan pembeli, sengketa, dan retur
-   (`TokoRetur` sudah ada di schema) perlu endpoint dan UI.
-3. **Webhook balik obrool → Tokowa** untuk `order.status_changed` dan
+2. **Webhook balik obrool → Tokowa** untuk `order.status_changed` dan
    `dispute.decided`, signed HMAC, kalau polling mulai berat.
 
 Sudah selesai lebih dulu: **pelacakan pesanan pembeli** (bagian 4.8),
 **quote + buat pesanan web** (bagian 4.9), **konfirmasi bayar pembeli**
-(bagian 4.10), dan **keranjang multi-produk** (bagian 4.9, sisi Tokowa).
+(bagian 4.10), **keranjang multi-produk** (bagian 4.9, sisi Tokowa), dan
+**pembatalan + retur pembeli/penjual** (bagian 4.11).
 Sumber tarif `courier_instant` masih terbuka (bagian 7).
 
 ## 7. Masih terbuka

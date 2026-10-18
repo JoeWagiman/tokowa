@@ -41,6 +41,7 @@ export default async function HalamanProdukSeller({
               <Link href="/toko-saya">Toko saya</Link>
               <Link className="aktif" href={`/toko-saya/${agentId}/produk`}>Produk</Link>
               <Link href={`/toko-saya/${agentId}/pesanan`}>Pesanan</Link>
+              <Link href={`/toko-saya/${agentId}/retur`}>Retur</Link>
               <Link href={`/toko-saya/${agentId}/pengaturan`}>Pengaturan toko</Link>
             </nav>
           </aside>

@@ -8,6 +8,18 @@ export type InfoToko = { agentId: string; nama: string; pemilik: string | null; 
 
 export type LacakLangkah = { status: string; label: string; keadaan: "selesai" | "kini" | "menunggu" };
 
+export type LacakRetur = {
+  kode: string;
+  status: string;
+  statusLabel: string;
+  alasan: string;
+  alasanLabel: string;
+  refundTotal: number;
+  refundCatatan: string | null;
+  dibuatAt: string;
+  diperbaruiAt: string;
+};
+
 export type LacakPesanan = {
   id: string;
   kode: string;
@@ -21,6 +33,13 @@ export type LacakPesanan = {
   langkah: LacakLangkah[];
   pengiriman: { mode: string; ongkir: number; alamat: string | null } | null;
   bayar: { metode: string | null; qrisNama: string | null; qrisUrl: string | null } | null;
+  bisaBatal: boolean;
+  bisaRetur: boolean;
+  jendelaReturHari: number;
+  ongkirRetur: string;
+  retur: LacakRetur | null;
   dibuatAt: string;
   diperbaruiAt: string;
 };
+
+export type AlasanRetur = { nilai: string; label: string };

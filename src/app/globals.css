@@ -783,6 +783,74 @@ img {
   border-radius: 12px;
 }
 
+.lacak-aksi {
+  margin-top: 16px;
+}
+
+.lacak-aksi .btn {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
+.lacak-aksi p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.lacak-aksi .baris-aksi {
+  margin-top: 12px;
+}
+
+.lacak-retur {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.lacak-retur .lacak-head {
+  gap: 12px;
+}
+
+.lacak-retur label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.lacak-retur select,
+.lacak-retur textarea,
+.lacak-retur input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  padding: 10px 14px;
+}
+
+.lacak-retur select:focus-visible,
+.lacak-retur textarea:focus-visible,
+.lacak-retur input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.lacak-retur textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.lacak-retur .baris-aksi .btn {
+  padding: 8px 16px;
+  font-size: 14px;
+}
+
 .lacak-bayar img {
   margin: 12px 0;
   border-radius: 8px;
@@ -882,5 +950,19 @@ img {
   font-weight: 700;
   color: var(--ink);
   margin-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .baris-aksi .btn,
+  .lacak-form .btn,
+  .lacak-aksi .btn,
+  .lacak-retur .baris-aksi .btn {
+    min-height: 44px;
+  }
+
+  .baris-aksi,
+  .lacak-retur .baris-aksi {
+    flex-wrap: wrap;
+  }
 }
 
