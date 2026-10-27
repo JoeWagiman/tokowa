@@ -2,8 +2,8 @@
 
 Status: **F1–F3 terimplementasi dan sudah lewat uji ujung ke ujung di branch
 dev obrool.** F4 sebagian: pelacakan pesanan pembeli (4.8), pemesanan web
-quote + buat pesanan (4.9), keranjang multi-produk, dan pembatalan + retur
-(4.11) sudah jalan. Sisanya (passthrough WABA, webhook balik) masih rencana.
+quote + buat pesanan (4.9), keranjang multi-produk, pembatalan + retur (4.11),
+dan webhook balik (4.12) sudah jalan. Sisanya (passthrough WABA) masih rencana.
 Dokumen ini mencatat endpoint yang benar-benar
 ada di kode obrool (`D:\Project\obrool`), bukan usulan lagi.
 
@@ -250,6 +250,39 @@ Pengecualian status setelah pesanan dibuat. Verifikasi pembeli sama seperti laca
   bukti tetap di seller; web tidak pernah memindahkan uang.
 - Belum ada model sengketa: kasus barang bermasalah ditutup lewat retur.
 
+### 4.12 Webhook balik obrool → Tokowa (obrool mengirim, Tokowa menerima)
+Obrolan status pesanan & retur saat status berubah, supaya Tokowa tidak harus
+menarik ulang (pull) terus. Dikonfigurasi di obrool lewat env server:
+`TOKOWA_WEBHOOK_URL` (URL penerima Tokowa) dan `TOKOWA_WEBHOOK_SECRET` (rahasia
+HMAC bersama; di Tokowa disimpan sebagai `OBROOL_WEBHOOK_SECRET`). Tanpa kedua
+env itu, kirim adalah no-op (persis pola nomor WA belum diatur).
+
+- Kejadian yang dikirim: `order.status_changed` setiap transisi status
+  `TokoPesanan` (buat pesanan web `tunggu_bayar`, konfirmasi bayar pembeli
+  `tunggu_verifikasi`, `terapkanPesananPaid` → `paid`, aksi seller
+  kirim/selesai/tolak/batal, batal pembeli dari web) dan `retur.updated` setiap
+  perubahan `TokoRetur` (pengajuan `ajukan`, putusan `setuju`/`tolak`,
+  `terima_barang`, `refund` → `selesai`).
+- Format: POST JSON `{id: "evt_<uuid>", type, version: 1, occurredAt, data}`.
+  Header `x-tokowa-timestamp` (unix detik) dan `x-tokowa-signature` =
+  `sha256=` + HMAC-SHA256 hex dari `<timestamp>.<body mentah>`.
+  `data order`: `{pesananId, kode, agentId, statusLama, statusBaru, total,
+  pelangganMask}` (nomor selalu di-mask, tidak pernah utuh). `data retur`:
+  `{returId, kode, pesananId, pesananKode, agentId, aksi, statusLama, statusBaru,
+  refundTotal}`.
+- Pengirim: fire-and-forget lib `webhook-tokowa.ts`, timeout 4 detik, maks 2
+  percobaan. Kegagalan kirim hanya `console.warn` dan tidak pernah menggagalkan
+  alur pesanan. Tidak ada antrean/outbox; kejadian yang gagal terkirim hilang.
+- Penerima Tokowa: `POST /api/webhooks/obrool`. Verifikasi tanda tangan
+  (constant-time) + jendela timestamp 5 menit → selain itu `401`; penerima
+  belum dikonfigurasi → `503`; body bukan JSON / tanpa `id`+`type` → `400`.
+  Id acara di-dedup (idempotent, ingatan 1000 id terakhir per instance) →
+  balasan `{data: {received: true}}` atau `{data: {received: true, duplikat:
+  true}}`. Saat ini penerima hanya mencatat log terstruktur `[webhook-obrool]`;
+  konsumen nyata (invalidasi cache / notifikasi pembeli) menyusul bila polling
+  mulai berat. `dispute.decided` ditunda: belum ada model sengketa, retur
+  menutup kasus barang bermasalah.
+
 ## 5. Keputusan yang sudah dikunci
 
 - **KYC satu backend.** Tidak ada state KYC yang disimpan di Tokowa; antrean
@@ -269,6 +302,10 @@ Pengecualian status setelah pesanan dibuat. Verifikasi pembeli sama seperti laca
 - **Satu pesanan hanya untuk satu toko.** Keranjang lintas toko ditolak di web
   (bukan digabung belakangan), karena `TokoPesanan` terikat satu `agentId` dan
   ongkir per toko.
+- **Webhook balik bertanda tangan HMAC, fire-and-forget.** obrool mengirim
+  `order.status_changed` + `retur.updated` ke Tokowa (bagian 4.12);
+  keberhasilan kirim tidak boleh menahan alur pesanan, dan penerima wajib
+  menerima id yang sama dua kali tanpa efek samping.
 - **Tiga mode kirim, tapi kurir instan belum otomatis.** `self_pickup` dan
   `seller_delivery` (tarif flat owner) sudah bisa dihitung; `courier_instant`
   diarahkan ke WhatsApp sampai ada sumber tarif kurir.
@@ -291,13 +328,12 @@ Pengecualian status setelah pesanan dibuat. Verifikasi pembeli sama seperti laca
 1. **Chat WABA sebagai jalur belanja.** Nomor WABA platform → webhook Meta →
    agent obrool. Tokowa tidak di jalur chat. Dua opsi: obrool memasang webhook
    sendiri, atau Tokowa hanya pass-through tanpa mengubah body.
-2. **Webhook balik obrool → Tokowa** untuk `order.status_changed` dan
-   `dispute.decided`, signed HMAC, kalau polling mulai berat.
 
 Sudah selesai lebih dulu: **pelacakan pesanan pembeli** (bagian 4.8),
 **quote + buat pesanan web** (bagian 4.9), **konfirmasi bayar pembeli**
-(bagian 4.10), **keranjang multi-produk** (bagian 4.9, sisi Tokowa), dan
-**pembatalan + retur pembeli/penjual** (bagian 4.11).
+(bagian 4.10), **keranjang multi-produk** (bagian 4.9, sisi Tokowa),
+**pembatalan + retur pembeli/penjual** (bagian 4.11), dan **webhook balik**
+(bagian 4.12).
 Sumber tarif `courier_instant` masih terbuka (bagian 7).
 
 ## 7. Masih terbuka
