@@ -1,9 +1,10 @@
 # Kontrak API Tokowa ↔ obrool
 
 Status: **F1–F3 terimplementasi dan sudah lewat uji ujung ke ujung di branch
-dev obrool.** F4 sebagian: pelacakan pesanan pembeli (4.8), pemesanan web
+dev obrool.** F4 selesai: pelacakan pesanan pembeli (4.8), pemesanan web
 quote + buat pesanan (4.9), keranjang multi-produk, pembatalan + retur (4.11),
-dan webhook balik (4.12) sudah jalan. Sisanya (passthrough WABA) masih rencana.
+webhook balik (4.12), dan chat WABA (4.13). Yang terbuka kini bahan lanjutan
+bagian 7 (sumber tarif `courier_instant`, dst).
 Dokumen ini mencatat endpoint yang benar-benar
 ada di kode obrool (`D:\Project\obrool`), bukan usulan lagi.
 
@@ -283,6 +284,32 @@ env itu, kirim adalah no-op (persis pola nomor WA belum diatur).
   mulai berat. `dispute.decided` ditunda: belum ada model sengketa, retur
   menutup kasus barang bermasalah.
 
+### 4.13 Webhook WhatsApp masuk (Meta → obrool; Tokowa tidak di jalur chat)
+Jalur belanja inti Tokowa adalah chat di satu nomor WhatsApp. Webhook Meta
+dipasang dan dimiliki obrool; Tokowa sama sekali tidak meneruskan body Meta.
+
+- `GET /api/channels/whatsapp/webhook` obrool: handshake Meta
+  (`hub.mode=subscribe` + `hub.challenge`) dengan `META_VERIFY_TOKEN` global
+  atau token per-agent (`whatsappVerifyToken`/`agent.id`). Fail-closed: token
+  salah → `403`.
+- `POST /api/channels/whatsapp/webhook` obrool: wajib lolos HMAC Meta
+  (`verifyMetaSignature`, raw body; tanpa secret → `401`). Agent dipilih dari
+  `metadata.phone_number_id` yang cocok dengan `whatsappPhoneNumberId` agent
+  (atau `?agentId=`). Nomor tanpa agent → `200` diam (tidak ada aksi). Pesan
+  didedup per `wamid`, lalu gerbang paket aktif + kuota kanal, lalu dispatch:
+  pemilik/staff (`handlePerintahToko`) → jalur platform
+  (`handlePesanPlatformTokowa`, hanya agent platform: satu nomor banyak toko,
+  pilih warung terdekat) → jalur pembeli toko (`handlePesanBeli` →
+  `buatDrafBeli`) → console → LLM umum. Balasan toko/platform/beli dikirim
+  lewat WABA agent itu sendiri (`sendChannelMessage`).
+- Tokowa hanya menautkan pembeli ke `wa.me` (`NEXT_PUBLIC_WA_NUMBER`; saat ini
+  kosong → tombol nonaktif, lihat bagian 5). Tidak ada endpoint Meta di Tokowa.
+- Terverifikasi di dev (`uji-waba.mjs`, 8/8): GET token benar `200` + echo
+  challenge, token salah `403`, POST tanpa tanda tangan `401`, POST bertanda
+  tangan untuk `phone_number_id` asing `200` diam, POST pesan pembeli
+  bertanda tangan ke agent yang dikonfigurasi membuat pesanan `draf`,
+  POST duplikat `wamid` yang sama tidak membuat pesanan kedua.
+
 ## 5. Keputusan yang sudah dikunci
 
 - **KYC satu backend.** Tidak ada state KYC yang disimpan di Tokowa; antrean
@@ -306,6 +333,9 @@ env itu, kirim adalah no-op (persis pola nomor WA belum diatur).
   `order.status_changed` + `retur.updated` ke Tokowa (bagian 4.12);
   keberhasilan kirim tidak boleh menahan alur pesanan, dan penerima wajib
   menerima id yang sama dua kali tanpa efek samping.
+- **Webhook WhatsApp dimiliki obrool; Tokowa tidak meneruskan body Meta.**
+  Meta menunjuk langsung ke obrool (bagian 4.13). Opsi Tokowa pass-through
+  ditolak: tidak menambah nilai, hanya menambah titik gagal di jalur chat.
 - **Tiga mode kirim, tapi kurir instan belum otomatis.** `self_pickup` dan
   `seller_delivery` (tarif flat owner) sudah bisa dihitung; `courier_instant`
   diarahkan ke WhatsApp sampai ada sumber tarif kurir.
@@ -325,11 +355,8 @@ env itu, kirim adalah no-op (persis pola nomor WA belum diatur).
 
 ## 6. F4 (sisa)
 
-1. **Chat WABA sebagai jalur belanja.** Nomor WABA platform → webhook Meta →
-   agent obrool. Tokowa tidak di jalur chat. Dua opsi: obrool memasang webhook
-   sendiri, atau Tokowa hanya pass-through tanpa mengubah body.
-
-Sudah selesai lebih dulu: **pelacakan pesanan pembeli** (bagian 4.8),
+Semua butir F4 sudah dikerjakan: **chat WABA** (webhook Meta dimiliki obrool,
+Tokowa tidak di jalur; bagian 4.13), **pelacakan pesanan pembeli** (bagian 4.8),
 **quote + buat pesanan web** (bagian 4.9), **konfirmasi bayar pembeli**
 (bagian 4.10), **keranjang multi-produk** (bagian 4.9, sisi Tokowa),
 **pembatalan + retur pembeli/penjual** (bagian 4.11), dan **webhook balik**
