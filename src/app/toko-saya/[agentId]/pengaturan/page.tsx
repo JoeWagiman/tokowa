@@ -15,6 +15,11 @@ type Setting = {
   jendelaReturHari: number;
   ongkirRetur: string | null;
   ongkirSellerFlat: number | null;
+  kurirInstanDasar: number | null;
+  kurirInstanPerKm: number | null;
+  kurirInstanJarakMaksKm: number | null;
+  lat: number | null;
+  lng: number | null;
   qrisStatisNama: string | null;
   qrisStatisUrl: string | null;
 };

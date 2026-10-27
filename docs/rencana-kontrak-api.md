@@ -3,8 +3,8 @@
 Status: **F1–F3 terimplementasi dan sudah lewat uji ujung ke ujung di branch
 dev obrool.** F4 selesai: pelacakan pesanan pembeli (4.8), pemesanan web
 quote + buat pesanan (4.9), keranjang multi-produk, pembatalan + retur (4.11),
-webhook balik (4.12), dan chat WABA (4.13). Yang terbuka kini bahan lanjutan
-bagian 7 (sumber tarif `courier_instant`, dst).
+webhook balik (4.12), chat WABA (4.13), dan tarif `courier_instant` (4.9).
+Yang terbuka kini bahan lanjutan bagian 7.
 Dokumen ini mencatat endpoint yang benar-benar
 ada di kode obrool (`D:\Project\obrool`), bukan usulan lagi.
 
@@ -66,7 +66,9 @@ ambang, foto?, aktif, createdAt, updatedAt}`
 ### Setting toko (model `TokoSetting`, per `agentId`)
 Field yang dipakai UI: `jamBuka`/`jamTutup` (`HH:MM`), `hariBuka` (CSV `0-6`),
 `jendelaReturHari` (0-30), `ongkirRetur` (`pembeli|toko|bagi_dua`),
-`qrisStatisNama`, `qrisStatisUrl`.
+`qrisStatisNama`, `qrisStatisUrl`, `ongkirSellerFlat`,
+`kurirInstanDasar`/`kurirInstanPerKm`/`kurirInstanJarakMaksKm` (tarif kurir
+instan, bagian 4.9), `lat`/`lng` (titik toko).
 
 ### Pesanan (model `TokoPesanan`)
 Status: `draf | tunggu_bayar | tunggu_verifikasi | paid | kirim | selesai | batal`.
@@ -112,6 +114,10 @@ pernah dari janji chat.
   `qrisStatisUrl`, `jamBuka`, `jamTutup`, `hariBuka`, dan **`ongkirSellerFlat`**
   (tarif kirim sendiri per pesanan, 0-1.000.000; `null`/kosong = belum ada
   tarif tetap). Tambahan `ongkirSellerFlat` dipakai quote `seller_delivery`.
+- Field kurir instan: `kurirInstanDasar` (0-1.000.000), `kurirInstanPerKm`
+  (0-100.000), `kurirInstanJarakMaksKm` (>0-100; semua `null`/kosong =
+  nonaktif), plus titik toko `lat`/`lng` (berpasangan, rentang koordinat sah).
+  Dipakai quote `courier_instant` (bagian 4.9).
 - `POST /api/agents/{agentId}/toko/foto` (multipart) → foto toko lewat R2.
 
 ### 4.6 Penjual: pesanan (auth user)
@@ -168,30 +174,39 @@ pernah dari janji chat.
 Tamu (guest checkout) dengan nomor WhatsApp, bukan akun. Harga selalu dihitung
 ulang dari DB, tidak pernah dari body.
 
-- `POST /api/v1/pesanan/quote` → body `{agentId, items:[{produkId, qty}], mode}`.
+- `POST /api/v1/pesanan/quote` → body `{agentId, items:[{produkId, qty}], mode, lat?, lng?}`.
   Validasi: agent ada, 1-20 baris, qty 1-99 per produk, produk aktif dan milik
-  agent, stok cukup. Balasan `{data: {subtotal, ongkir, total, mode, labelMode,
+  agent, stok cukup. Balasan `{data: {subtotal, ongkir, total, jarakKm, mode, labelMode,
   catatan, items[]}}`. `ongkir`/`total` bisa `null` bila tarif belum bisa
-  dihitung sistem (lihat `catatan`). Rate limit 30/menit per IP.
+  dihitung sistem (lihat `catatan`). `jarakKm` hanya terisi untuk
+  `courier_instant`. Rate limit 30/menit per IP.
 - `POST /api/v1/pesanan` → body `{agentId, items, mode, pelanggan, alamat?,
-  idempotencyKey?}`. Membuat pesanan status `tunggu_bayar`, `metodeBayar`
+  lat?, lng?, idempotencyKey?}`. Membuat pesanan status `tunggu_bayar`, `metodeBayar`
   `qris_toko`. `pelanggan` = nomor WA (digit, 9-15). `alamat` wajib saat
-  `seller_delivery` (min 5 karakter). Bila `ongkir` `null` → `400` (arahkan ke
-  WhatsApp). Balasan `{data: {id, kode, total, ongkir, status, mode, labelMode,
+  `seller_delivery` dan `courier_instant` (min 5 karakter); `courier_instant`
+  juga wajib `lat`/`lng` sah (selain itu `400`). Bila `ongkir` `null` → `400`
+  (arahkan ke WhatsApp). Balasan `{data: {id, kode, total, ongkir, status, mode, labelMode,
   bayar{qrisNama,qrisUrl}}}`. `idempotencyKey` unik: kirim ulang key yang sama
   mengembalikan pesanan yang sama (tanpa membuat baru). Rate limit 6 per 10
   menit per IP.
 - **Aturan mode kirim:** `self_pickup` ongkir 0; `seller_delivery` pakai
   `TokoSetting.ongkirSellerFlat` (null → belum bisa dihitung); `courier_instant`
-  belum punya sumber tarif di obrool (modul logistik yang ada hanya ekspedisi
-  binderbyte), jadi selalu diarahkan ke WhatsApp, bukan ditebak.
+  pakai tarif jarak milik toko: `kurirInstanDasar` (termasuk 3 km pertama) +
+  `kurirInstanPerKm` × km berikutnya (dibulatkan ke atas), dari titik toko
+  (`lat`/`lng` setting) ke lokasi pembeli, dibulatkan ke ratusan rupiah, dengan
+  batas `kurirInstanJarakMaksKm`. Tarif/titik belum diisi, lokasi pembeli belum
+  ada, atau jarak di luar jangkauan → `null` + catatan arahan WhatsApp.
+  Koordinat pembeli hanya dipakai menghitung tarif saat itu; tidak disimpan.
 - **Stok tidak dikurangi saat pesanan dibuat.** Stok berkurang saat `paid`
   (lewat `terapkanPesananPaid`), jadi pesanan yang tak pernah dibayar tidak
   mengunci stok.
 - Tokowa: BFF publik `POST /api/pesan/quote` + `POST /api/pesan`, form "Pesan
-  dari web" di `/produk/[id]`. Setelah pesanan dibuat pembeli diarahkan ke
-  `/lacak?kode=..&hp=..` (4 angka terakhir terisi otomatis). Bukti bayar dikirim
-  lewat WhatsApp, tidak ada unggah berkas di web.
+  dari web" di `/produk/[id]` dan checkout `/keranjang`. Setelah pesanan dibuat
+  pembeli diarahkan ke `/lacak?kode=..&hp=..` (4 angka terakhir terisi
+  otomatis). Bukti bayar dikirim lewat WhatsApp, tidak ada unggah berkas di web.
+  Mode `courier_instant` menampilkan alamat + tombol "Pakai lokasi saya"
+  (geolocation browser); `lat`/`lng` ikut dikirim ke quote/pesan dan quote
+  menampilkan jarak. Tarif & titik toko diatur penjual di Pengaturan toko.
 - **Keranjang multi-produk (sisi Tokowa, tanpa endpoint baru).** Keranjang
   disimpan di `localStorage` (`tokowa-keranjang-v1`) dan dikirim utuh sebagai
   `items[]` ke `quote`/`pesan` yang memang sudah menerima 1-20 baris. Satu
@@ -336,9 +351,12 @@ dipasang dan dimiliki obrool; Tokowa sama sekali tidak meneruskan body Meta.
 - **Webhook WhatsApp dimiliki obrool; Tokowa tidak meneruskan body Meta.**
   Meta menunjuk langsung ke obrool (bagian 4.13). Opsi Tokowa pass-through
   ditolak: tidak menambah nilai, hanya menambah titik gagal di jalur chat.
-- **Tiga mode kirim, tapi kurir instan belum otomatis.** `self_pickup` dan
-  `seller_delivery` (tarif flat owner) sudah bisa dihitung; `courier_instant`
-  diarahkan ke WhatsApp sampai ada sumber tarif kurir.
+- **Tiga mode kirim, kurir instan pakai tarif jarak milik toko.**
+  `self_pickup` dan `seller_delivery` (tarif flat owner) bisa dihitung;
+  `courier_instant` dihitung dari tarif dasar + per km dan titik yang
+  ditetapkan toko sendiri (bagian 4.9), bukan estimasi platform. Bila toko
+  belum mengaturnya, pembeli tetap diarahkan ke WhatsApp. Binderbyte hanya
+  ekspedisi reguler, tidak dipakai untuk instan.
 - **Stok berkurang saat `paid`, bukan saat pesanan dibuat.** Satu jalur:
   `terapkanPesananPaid` (idempoten), dipakai webhook pembayaran dan aksi
   `konfirmasi` seller.
@@ -359,15 +377,15 @@ Semua butir F4 sudah dikerjakan: **chat WABA** (webhook Meta dimiliki obrool,
 Tokowa tidak di jalur; bagian 4.13), **pelacakan pesanan pembeli** (bagian 4.8),
 **quote + buat pesanan web** (bagian 4.9), **konfirmasi bayar pembeli**
 (bagian 4.10), **keranjang multi-produk** (bagian 4.9, sisi Tokowa),
-**pembatalan + retur pembeli/penjual** (bagian 4.11), dan **webhook balik**
-(bagian 4.12).
-Sumber tarif `courier_instant` masih terbuka (bagian 7).
+**pembatalan + retur pembeli/penjual** (bagian 4.11), **webhook balik**
+(bagian 4.12), dan **tarif `courier_instant`** (bagian 4.9).
 
 ## 7. Masih terbuka
 
 - Media storage: satu bucket R2 untuk produk dan KYC (mempengaruhi alur upload)?
   Termasuk kemungkinan unggah bukti bayar di web kalau R2 siap.
-- Sumber estimasi ongkir untuk mode `courier_instant`.
+- Tarif `courier_instant` di jalur chat platform (web sudah; bot kini belum
+  menawarkannya saat memilih warung terdekat).
 - Normalisasi endpoint: kapan `/api/agents/*` pindah ke `v1/*` dan envelope
   diseragamkan ke `{data}`.
 - Kedaluwarsa `idempotencyKey` `POST /api/v1/pesanan` (kini unik selamanya,

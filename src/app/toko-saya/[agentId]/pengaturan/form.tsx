@@ -9,6 +9,11 @@ type Setting = {
   jendelaReturHari: number;
   ongkirRetur: string | null;
   ongkirSellerFlat: number | null;
+  kurirInstanDasar: number | null;
+  kurirInstanPerKm: number | null;
+  kurirInstanJarakMaksKm: number | null;
+  lat: number | null;
+  lng: number | null;
   qrisStatisNama: string | null;
   qrisStatisUrl: string | null;
 };
@@ -45,6 +50,11 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
           jendelaReturHari: Number(get("jendelaReturHari") || 0),
           ongkirRetur: get("ongkirRetur"),
           ongkirSellerFlat: get("ongkirSellerFlat") === "" ? "" : Number(get("ongkirSellerFlat")),
+          kurirInstanDasar: get("kurirInstanDasar") === "" ? "" : Number(get("kurirInstanDasar")),
+          kurirInstanPerKm: get("kurirInstanPerKm") === "" ? "" : Number(get("kurirInstanPerKm")),
+          kurirInstanJarakMaksKm: get("kurirInstanJarakMaksKm") === "" ? "" : Number(get("kurirInstanJarakMaksKm")),
+          lat: get("lat") === "" ? "" : Number(get("lat")),
+          lng: get("lng") === "" ? "" : Number(get("lng")),
           qrisStatisNama: get("qrisStatisNama") || "",
           qrisStatisUrl: get("qrisStatisUrl") || "",
         }),
@@ -131,6 +141,82 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
         <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
           Dipakai saat pembeli memilih "diantar toko" di web. Kosongkan bila belum ada tarif tetap, pembeli diarahkan
           memilih ambil di toko atau bertanya lewat WhatsApp.
+        </p>
+
+        <h3 style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 8 }}>Kurir instan</h3>
+        <div className="baris-form">
+          <label>
+            Tarif dasar (Rp, termasuk 3 km pertama)
+            <input
+              className="rincian-input"
+              name="kurirInstanDasar"
+              type="number"
+              min={0}
+              max={1000000}
+              step={500}
+              placeholder="mis. 10000"
+              defaultValue={setting.kurirInstanDasar ?? ""}
+            />
+          </label>
+          <label>
+            Per km berikutnya (Rp)
+            <input
+              className="rincian-input"
+              name="kurirInstanPerKm"
+              type="number"
+              min={0}
+              max={100000}
+              step={100}
+              placeholder="mis. 2500"
+              defaultValue={setting.kurirInstanPerKm ?? ""}
+            />
+          </label>
+          <label>
+            Jarak maks (km, kosong = tanpa batas)
+            <input
+              className="rincian-input"
+              name="kurirInstanJarakMaksKm"
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              placeholder="mis. 15"
+              defaultValue={setting.kurirInstanJarakMaksKm ?? ""}
+            />
+          </label>
+        </div>
+        <div className="baris-form" style={{ marginTop: 12 }}>
+          <label>
+            Titik toko: latitude
+            <input
+              className="rincian-input"
+              name="lat"
+              type="number"
+              step="any"
+              min={-90}
+              max={90}
+              placeholder="-6.200000"
+              defaultValue={setting.lat ?? ""}
+            />
+          </label>
+          <label>
+            Titik toko: longitude
+            <input
+              className="rincian-input"
+              name="lng"
+              type="number"
+              step="any"
+              min={-180}
+              max={180}
+              placeholder="106.816666"
+              defaultValue={setting.lng ?? ""}
+            />
+          </label>
+        </div>
+        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
+          Ongkir kurir instan dihitung dari jarak titik toko ke titik lokasi pembeli: tarif dasar mencakup 3 km
+          pertama, selebihnya per km (dibulatkan ke atas). Kosongkan tarif dasar atau per km untuk menonaktifkan
+          kurir instan di web. Kurir tetap kamu pesan sendiri; web hanya menghitung ongkirnya.
         </p>
       </section>
 

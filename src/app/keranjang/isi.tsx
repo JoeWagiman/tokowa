@@ -18,8 +18,10 @@ import {
   kirimPesanan,
   kunciIdempotensi,
   useKutipan,
+  useLokasiPembeli,
   validasiPesanan,
 } from "@/lib/pesan-klien";
+import { BlokLokasi } from "@/components/blok-lokasi";
 
 export function IsiKeranjang() {
   const router = useRouter();
@@ -30,6 +32,7 @@ export function IsiKeranjang() {
   const [sibuk, setSibuk] = useState(false);
   const [pesan, setPesan] = useState<string | null>(null);
   const [kunci] = useState(() => kunciIdempotensi("keranjang"));
+  const { lokasi, status: statusLokasi, minta: mintaLokasi } = useLokasiPembeli();
 
   useEffect(() => {
     setItems(bacaKeranjang());
@@ -39,12 +42,12 @@ export function IsiKeranjang() {
   const agentId = daftar[0]?.agentId ?? "";
   const toko = daftar[0]?.toko ?? "";
   const baris = daftar.map((x) => ({ produkId: x.produkId, qty: x.qty }));
-  const { kutipan, memuat, galat } = useKutipan(agentId, baris, mode);
+  const { kutipan, memuat, galat } = useKutipan(agentId, baris, mode, mode === "courier_instant" ? lokasi : null);
 
   async function buatPesanan(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPesan(null);
-    const salah = validasiPesanan(pelanggan, mode, alamat);
+    const salah = validasiPesanan(pelanggan, mode, alamat, lokasi);
     if (salah) {
       setPesan(salah);
       return;
@@ -56,6 +59,7 @@ export function IsiKeranjang() {
       mode,
       pelanggan,
       alamat,
+      ...(mode === "courier_instant" && lokasi ? { lat: lokasi.lat, lng: lokasi.lng } : {}),
       idempotencyKey: kunci,
     });
     setSibuk(false);
@@ -176,7 +180,7 @@ export function IsiKeranjang() {
           ))}
         </fieldset>
 
-        {mode === "seller_delivery" && (
+        {(mode === "seller_delivery" || mode === "courier_instant") && (
           <label>
             Alamat pengiriman
             <textarea
@@ -185,9 +189,15 @@ export function IsiKeranjang() {
               maxLength={300}
               value={alamat}
               onChange={(e) => setAlamat(e.target.value)}
-              placeholder="Jalan, nomor rumah, patokan"
+              placeholder={
+                mode === "courier_instant" ? "Jalan, nomor rumah, patokan untuk kurir" : "Jalan, nomor rumah, patokan"
+              }
             />
           </label>
+        )}
+
+        {mode === "courier_instant" && (
+          <BlokLokasi lokasi={lokasi} status={statusLokasi} onMinta={mintaLokasi} />
         )}
 
         <div className="ringkas-total">
