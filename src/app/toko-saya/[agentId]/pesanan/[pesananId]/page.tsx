@@ -129,12 +129,17 @@ export default async function HalamanDetailPesanan({
                 </tbody>
               </table>
 
-              {d.bukti && (
+              {d.bukti && /^https?:\/\//.test(d.bukti) && (
                 <p style={{ marginTop: 14, fontSize: 14, color: "var(--muted)" }}>
                   Bukti transfer:{" "}
                   <a href={d.bukti} target="_blank" rel="noreferrer" style={{ color: "var(--accent-ink)", fontWeight: 600 }}>
                     lihat bukti
                   </a>
+                </p>
+              )}
+              {d.bukti && !/^https?:\/\//.test(d.bukti) && (
+                <p style={{ marginTop: 14, fontSize: 14, color: "var(--muted)" }}>
+                  Bukti transfer: {d.bukti === "foto-terlampir-chat" ? "foto terlampir di chat WhatsApp" : d.bukti}
                 </p>
               )}
               {d.bayarUrl && ["tunggu_bayar"].includes(d.status) && (

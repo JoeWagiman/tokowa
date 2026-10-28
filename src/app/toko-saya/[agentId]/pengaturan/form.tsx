@@ -40,7 +40,7 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
     setPesan(null);
     setSibuk(true);
     try {
-      const res = await fetch(`/api/proxy/agents/${agentId}/toko/setting`, {
+      const res = await fetch(`/api/proxy/v1/seller/setting?agentId=${agentId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,7 +61,7 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) {
-        setPesan({ jenis: "galat", teks: body?.error ?? "Gagal menyimpan pengaturan." });
+        setPesan({ jenis: "galat", teks: body?.error?.message ?? body?.error ?? "Gagal menyimpan pengaturan." });
         return;
       }
       setPesan({ jenis: "ok", teks: "Pengaturan tersimpan." });

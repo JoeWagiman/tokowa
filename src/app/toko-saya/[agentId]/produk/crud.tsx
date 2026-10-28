@@ -63,10 +63,10 @@ export function CrudProduk({ agentId, galatAwal }: { agentId: string; galatAwal:
     setMuat(true);
     setGalatMuat("");
     try {
-      const res = await fetch(`/api/proxy/agents/${agentId}/toko/produk?limit=200`, { cache: "no-store" });
+      const res = await fetch(`/api/proxy/v1/seller/produk?agentId=${agentId}&limit=200`, { cache: "no-store" });
       const body = await res.json();
-      if (!res.ok) throw new Error(body?.error ?? "");
-      setDaftar(body.produk ?? []);
+      if (!res.ok) throw new Error(body?.error?.message ?? "");
+      setDaftar(body.data?.items ?? []);
     } catch {
       setGalatMuat("Tidak bisa memuat daftar produk. Coba lagi nanti.");
     } finally {
@@ -82,10 +82,10 @@ export function CrudProduk({ agentId, galatAwal }: { agentId: string; galatAwal:
   async function unggahFoto(file: File): Promise<{ url?: string; galat?: string }> {
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch(`/api/proxy/agents/${agentId}/toko/foto`, { method: "POST", body: fd });
+    const res = await fetch(`/api/proxy/v1/seller/foto?agentId=${agentId}`, { method: "POST", body: fd });
     const body = await res.json().catch(() => null);
-    if (!res.ok || !body?.url) return { galat: body?.error ?? "Unggahan gagal." };
-    return { url: body.url as string };
+    if (!res.ok || !body?.data?.url) return { galat: body?.error?.message ?? "Unggahan gagal." };
+    return { url: body.data.url as string };
   }
 
   async function simpan(e: React.FormEvent<HTMLFormElement>) {
@@ -113,8 +113,8 @@ export function CrudProduk({ agentId, galatAwal }: { agentId: string; galatAwal:
       foto: foto || undefined,
     };
     const url = form.id
-      ? `/api/proxy/agents/${agentId}/toko/produk/${form.id}`
-      : `/api/proxy/agents/${agentId}/toko/produk`;
+      ? `/api/proxy/v1/seller/produk/${form.id}?agentId=${agentId}`
+      : `/api/proxy/v1/seller/produk?agentId=${agentId}`;
     const res = await fetch(url, {
       method: form.id ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
@@ -122,7 +122,7 @@ export function CrudProduk({ agentId, galatAwal }: { agentId: string; galatAwal:
     });
     const body = await res.json().catch(() => null);
     if (!res.ok) {
-      setPesan({ jenis: "galat", teks: body?.error ?? "Gagal menyimpan produk." });
+      setPesan({ jenis: "galat", teks: body?.error?.message ?? "Gagal menyimpan produk." });
       return;
     }
     setPesan({ jenis: "ok", teks: form.id ? "Produk diperbarui." : "Produk ditambahkan." });
@@ -132,14 +132,14 @@ export function CrudProduk({ agentId, galatAwal }: { agentId: string; galatAwal:
 
   async function hapus(id: string, nama: string) {
     if (!window.confirm(`Hapus "${nama}" permanen? Tindakan ini tidak bisa dibatalkan.`)) return;
-    const res = await fetch(`/api/proxy/agents/${agentId}/toko/produk/${id}/hapus-permanen`, {
+    const res = await fetch(`/api/proxy/v1/seller/produk/${id}/hapus-permanen?agentId=${agentId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nama }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setPesan({ jenis: "galat", teks: body?.error ?? "Gagal menghapus produk." });
+      setPesan({ jenis: "galat", teks: body?.error?.message ?? "Gagal menghapus produk." });
       return;
     }
     setPesan({ jenis: "ok", teks: "Produk dihapus." });
@@ -273,14 +273,14 @@ export function CrudProduk({ agentId, galatAwal }: { agentId: string; galatAwal:
                         className="btn btn-ghost"
                         style={{ padding: "5px 12px", fontSize: 13 }}
                         onClick={async () => {
-                          const res = await fetch(`/api/proxy/agents/${agentId}/toko/produk/${p.id}`, {
+                          const res = await fetch(`/api/proxy/v1/seller/produk/${p.id}?agentId=${agentId}`, {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ aktif: !p.aktif }),
                           });
                           if (!res.ok) {
                             const body = await res.json().catch(() => null);
-                            setPesan({ jenis: "galat", teks: body?.error ?? "Gagal mengubah status." });
+                            setPesan({ jenis: "galat", teks: body?.error?.message ?? "Gagal mengubah status." });
                             return;
                           }
                           void muatUlang();

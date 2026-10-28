@@ -98,18 +98,27 @@ pernah dari janji chat.
   PNG/JPG/WebP, maks 5 MB, butuh R2 terkonfigurasi (kalau tidak, `503`).
 
 ### 4.4 Penjual: produk (auth user, lewat agent)
-- `GET /api/agents/{agentId}/toko/produk?limit=&offset=` → `{produk[], total, limit, offset}`
-- `POST /api/agents/{agentId}/toko/produk` → buat produk.
-- `PATCH /api/agents/{agentId}/toko/produk/{produkId}` → update parsial
-  (termasuk `aktif: false` untuk nonaktifkan). **Bukan PUT.**
-- `DELETE /api/agents/{agentId}/toko/produk/{produkId}` → hapus lunak.
-- `POST /api/agents/{agentId}/toko/produk/{produkId}/hapus-permanen` →
+Kanonik v1 (Tokowa hanya memakai ini):
+- `GET /api/v1/seller/produk?agentId=&limit=&offset=&q=` → `{data:{items[], total, limit, offset}}`
+- `POST /api/v1/seller/produk?agentId=` → buat produk → `201 {data: produk}`.
+- `PATCH /api/v1/seller/produk/{produkId}?agentId=` → update parsial
+  (termasuk `aktif: false` untuk nonaktifkan) → `{data: produk}`. **Bukan PUT.**
+- `DELETE /api/v1/seller/produk/{produkId}?agentId=` → hapus lunak → `{data:{ok:true}}`.
+- `POST /api/v1/seller/produk/{produkId}/hapus-permanen?agentId=` →
   body `{nama}`, nilai harus sama dengan nama produk (case-insensitive).
   Ditolak bila produk masih dirujuk pesanan.
-  → `{ok:true, nama}`.
+  → `{data:{ok:true, nama}}`.
+- `POST /api/v1/seller/foto?agentId=` (multipart `file`, sama seperti foto
+  produk lama) → `{data:{url}}`.
+- Galat selalu `{error:{code,message}}`. Jalur lama `/api/agents/{id}/toko/*`
+  (envelope `{produk}`/`{setting}`/`{url}`, galat string polos) tetap hidup
+  untuk dashboard internal obrool; logika validasi dibagi lewat
+  `@/lib/toko-admin` supaya aturannya tidak bercabang.
 
 ### 4.5 Penjual: setting toko (auth user)
-- `GET`/`POST /api/agents/{agentId}/toko/setting` → baca/tulis setting.
+- `GET`/`POST /api/v1/seller/setting?agentId=` → `{data:{setting}}`.
+  (Jalur lama `/api/agents/{id}/toko/setting` tetap hidup untuk dashboard
+  internal obrool.)
 - Field terkini: `jendelaReturHari`, `ongkirRetur`, `qrisStatisNama`,
   `qrisStatisUrl`, `jamBuka`, `jamTutup`, `hariBuka`, dan **`ongkirSellerFlat`**
   (tarif kirim sendiri per pesanan, 0-1.000.000; `null`/kosong = belum ada
@@ -118,7 +127,6 @@ pernah dari janji chat.
   (0-100.000), `kurirInstanJarakMaksKm` (>0-100; semua `null`/kosong =
   nonaktif), plus titik toko `lat`/`lng` (berpasangan, rentang koordinat sah).
   Dipakai quote `courier_instant` (bagian 4.9).
-- `POST /api/agents/{agentId}/toko/foto` (multipart) → foto toko lewat R2.
 
 ### 4.6 Penjual: pesanan (auth user)
 - `GET /api/v1/seller/pesanan?agentId=&status=&cursor=&limit=` (limit maks 50)
@@ -203,7 +211,7 @@ ulang dari DB, tidak pernah dari body.
 - Tokowa: BFF publik `POST /api/pesan/quote` + `POST /api/pesan`, form "Pesan
   dari web" di `/produk/[id]` dan checkout `/keranjang`. Setelah pesanan dibuat
   pembeli diarahkan ke `/lacak?kode=..&hp=..` (4 angka terakhir terisi
-  otomatis). Bukti bayar dikirim lewat WhatsApp, tidak ada unggah berkas di web.
+  otomatis). Bukti bayar bisa dilampirkan di halaman lacak atau lewat WhatsApp.
   Mode `courier_instant` menampilkan alamat + tombol "Pakai lokasi saya"
   (geolocation browser); `lat`/`lng` ikut dikirim ke quote/pesan dan quote
   menampilkan jarak. Tarif & titik toko diatur penjual di Pengaturan toko.
@@ -217,7 +225,8 @@ ulang dari DB, tidak pernah dari body.
 
 ### 4.10 Konfirmasi bayar pembeli (publik, tanpa auth)
 Menutup jeda antara pesanan web dibuat dan verifikasi seller. Pembeli menyatakan
-sudah membayar; sistem TIDAK memeriksa uang dan TIDAK mengirim bukti berkas.
+sudah membayar; sistem TIDAK memeriksa uang. Bukti berkas kini bisa dilampirkan
+dari web (R2 aktif), tetap opsional.
 
 - `POST /api/v1/pesanan/bayar` → body `{kode, hp}` (verifikasi sama seperti
   lacak: kode 6 huruf terakhir id atau id penuh + 4 angka terakhir nomor WA).
@@ -228,10 +237,19 @@ sudah membayar; sistem TIDAK memeriksa uang dan TIDAK mengirim bukti berkas.
   Idempoten: `tunggu_verifikasi` yang sudah ada tidak memicu notifikasi ulang;
   `paid`/`kirim`/`selesai` membalas "sudah dibayar". Kode/nomor tidak cocok →
   `404`. Rate limit 10 per 10 menit per IP.
+- `POST /api/v1/pesanan/bukti` → multipart `{kode, hp, file}` (PNG/JPG/WebP,
+  maks 5 MB, dicek magic bytes). Verifikasi kode+hp sama; hanya status
+  `tunggu_bayar`/`tunggu_verifikasi` (selain itu `409`). File disimpan di R2
+  prefix `bukti-bayar/`, URL menjadi `TokoPesanan.bukti`; dari `tunggu_bayar`
+  berikutnya sama persis seperti `/bayar` (geser + notifikasi owner, penanda
+  tidak ditimpa). Penjual melihatnya lewat detail pesanan. Rate limit 8 per
+  10 menit per IP. R2 belum terkonfigurasi → `503`.
 - Jalur chat ikut memakai helper yang sama (`konfirmasiBayarPembeli`), jadi bot
   tidak lagi menjawab "dicek otomatis oleh sistem" untuk QRIS statis toko.
 - Tokowa: BFF publik `POST /api/lacak/bayar` + tombol "Saya sudah bayar" di kartu
-  `/lacak`. Setelah menandai, halaman menyegarkan status sendiri (menjadi
+  `/lacak`, dan BFF `POST /api/lacak/bukti` + lampiran bukti opsional pada kartu
+  yang sama (dengan lampiran, tombol menjadi "Kirim bukti & tandai sudah
+  bayar"). Setelah menandai, halaman menyegarkan status sendiri (menjadi
   "Menunggu pemeriksaan toko").
 - Stok tetap utuh di langkah ini; pengurangan hanya saat seller `konfirmasi`.
 
@@ -319,6 +337,10 @@ dipasang dan dimiliki obrool; Tokowa sama sekali tidak meneruskan body Meta.
   lewat WABA agent itu sendiri (`sendChannelMessage`).
 - Tokowa hanya menautkan pembeli ke `wa.me` (`NEXT_PUBLIC_WA_NUMBER`; saat ini
   kosong → tombol nonaktif, lihat bagian 5). Tidak ada endpoint Meta di Tokowa.
+- Jalur platform ikut menawarkan kurir instan: bila lokasi pembeli ada dan
+  toko tujuan menetapkan tarif, ongkir dihitung dengan rumus web yang sama
+  (`hitungOngkirKurirInstan`) dan ditawarkan di balasan; pembeli membalas
+  `KURIR` saat konfirmasi draf untuk menambahkannya ke total sebelum bayar.
 - Terverifikasi di dev (`uji-waba.mjs`, 8/8): GET token benar `200` + echo
   challenge, token salah `403`, POST tanpa tanda tangan `401`, POST bertanda
   tangan untuk `phone_number_id` asing `200` diam, POST pesan pembeli
@@ -336,11 +358,16 @@ dipasang dan dimiliki obrool; Tokowa sama sekali tidak meneruskan body Meta.
 - **Pembayaran pesanan web: QRIS statis toko + verifikasi seller.** Tidak pakai
   paylink iPaymu untuk jalur ini. Pembeli membayar ke QRIS toko, seller
   memverifikasi lewat aksi `konfirmasi` (`tunggu_verifikasi` → `paid`).
-- **Bukti bayar lewat WhatsApp, tanpa unggah di web.** R2 belum dikonfigurasi,
-  jadi tidak ada alur upload berkas untuk pembeli.
-- **Pembeli menandai "sudah bayar" dari web, tanpa bukti berkas.** Itu hanya
-  memindahkan pesanan ke `tunggu_verifikasi` dan memberi tahu toko; keputusan
-  uang tetap di seller lewat aksi `konfirmasi`.
+- **Satu bucket R2 untuk semua media, prefix per kebutuhan.** Bucket
+  `obrool-ava` (publik, `R2_PUBLIC_BASE_URL`) dipakai bersama lewat helper
+  `@/lib/r2`: avatar, `toko/` (foto produk), `kyc/` (dokumen KYC),
+  `bukti-bayar/` (bukti transfer web). Voice note boleh bucket terpisah
+  (`R2_VOICE_BUCKET`, lifecycle 7 hari). URL bersifat publik-tak-tertebak
+  (UUID). Catatan: dokumen KYC adalah PII di bucket publik; memindahkannya ke
+  bucket privat + URL bertanda tangan adalah pengerasan lanjutan (bagian 7).
+- **Bukti bayar bisa dilampirkan dari web, tetap opsional.** Dengan R2 aktif,
+  pembeli boleh mengunggah bukti di `/lacak` (bagian 4.10); tanpa lampiran,
+  tombol "Saya sudah bayar" tetap jalan. Lewat WhatsApp juga tetap bisa.
 - **Satu pesanan hanya untuk satu toko.** Keranjang lintas toko ditolak di web
   (bukan digabung belakangan), karena `TokoPesanan` terikat satu `agentId` dan
   ongkir per toko.
@@ -348,6 +375,12 @@ dipasang dan dimiliki obrool; Tokowa sama sekali tidak meneruskan body Meta.
   `order.status_changed` + `retur.updated` ke Tokowa (bagian 4.12);
   keberhasilan kirim tidak boleh menahan alur pesanan, dan penerima wajib
   menerima id yang sama dua kali tanpa efek samping.
+- **Endpoint penjual yang dipakai Tokowa kanoniknya `v1`.** Produk, setting,
+  dan foto penjual memakai `/api/v1/seller/*` + envelope `{data}` /
+  `{error:{code,message}}`. Jalur lama `/api/agents/{id}/toko/*` sengaja tidak
+  dihapus karena dashboard internal obrool masih memakainya; keduanya berbagi
+  helper validasi yang sama (`@/lib/toko-admin`). Endpoint internal lain
+  (analitik/status/templates/withdraw) di luar kontrak Tokowa.
 - **Webhook WhatsApp dimiliki obrool; Tokowa tidak meneruskan body Meta.**
   Meta menunjuk langsung ke obrool (bagian 4.13). Opsi Tokowa pass-through
   ditolak: tidak menambah nilai, hanya menambah titik gagal di jalur chat.
@@ -382,12 +415,8 @@ Tokowa tidak di jalur; bagian 4.13), **pelacakan pesanan pembeli** (bagian 4.8),
 
 ## 7. Masih terbuka
 
-- Media storage: satu bucket R2 untuk produk dan KYC (mempengaruhi alur upload)?
-  Termasuk kemungkinan unggah bukti bayar di web kalau R2 siap.
-- Tarif `courier_instant` di jalur chat platform (web sudah; bot kini belum
-  menawarkannya saat memilih warung terdekat).
-- Normalisasi endpoint: kapan `/api/agents/*` pindah ke `v1/*` dan envelope
-  diseragamkan ke `{data}`.
+- Bucket privat + URL bertanda tangan untuk dokumen KYC (kini publik di
+  bucket bersama; lihat bagian 5).
 - Kedaluwarsa `idempotencyKey` `POST /api/v1/pesanan` (kini unik selamanya,
   usulan window 24 jam).
 - `message` error: tetap Indonesia + `code` stabil seperti sekarang, atau

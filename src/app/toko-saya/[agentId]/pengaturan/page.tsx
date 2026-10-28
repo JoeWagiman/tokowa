@@ -36,7 +36,7 @@ export default async function HalamanPengaturan({
   let setting: Setting | null = null;
   let galat: ApiError | null = null;
   try {
-    const s = await obrool<{ setting: Setting }>(`/api/agents/${encodeURIComponent(agentId)}/toko/setting`, { token });
+    const s = await obrool<{ setting: Setting }>(`/api/v1/seller/setting`, { token, search: { agentId } });
     setting = s.setting;
   } catch (e) {
     const err = e instanceof ApiError ? e : null;

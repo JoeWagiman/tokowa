@@ -176,6 +176,8 @@ function KartuLacak({
   onUlangi: () => void;
 }) {
   const [kirim, setKirim] = useState(false);
+  const [berkas, setBerkas] = useState<File | null>(null);
+  const [galatBerkas, setGalatBerkas] = useState<string | null>(null);
   const [galatBayar, setGalatBayar] = useState<string | null>(null);
   const [tanyaBatal, setTanyaBatal] = useState(false);
   const [sibuk, setSibuk] = useState(false);
@@ -248,6 +250,41 @@ function KartuLacak({
     }
   }
 
+  async function kirimBukti() {
+    if (!berkas) return;
+    setKirim(true);
+    setGalatBayar(null);
+    try {
+      const fd = new FormData();
+      fd.append("kode", p.id);
+      fd.append("hp", hp);
+      fd.append("file", berkas);
+      const res = await fetch("/api/lacak/bukti", { method: "POST", body: fd, cache: "no-store" });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setGalatBayar(body?.error?.message ?? "Tidak bisa mengirim bukti. Coba lagi.");
+        return;
+      }
+      onPesan(body?.data?.pesan ?? "Bukti terkirim ke toko.");
+      setBerkas(null);
+      onSegarkan();
+    } catch {
+      setGalatBayar("Tidak bisa menghubungi server. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setKirim(false);
+    }
+  }
+
+  function pilihBerkas(f: File | null) {
+    setGalatBerkas(null);
+    if (f && f.size > 5 * 1024 * 1024) {
+      setGalatBerkas("Ukuran bukti melebihi 5 MB. Kecilkan dulu (screenshot biasanya cukup).");
+      setBerkas(null);
+      return;
+    }
+    setBerkas(f);
+  }
+
   return (
     <section className="kartu" aria-label={`Pesanan ${p.kode}`}>
       <div className="lacak-head">
@@ -288,8 +325,8 @@ function KartuLacak({
             <>
               <img src={p.bayar.qrisUrl} alt={p.bayar.qrisNama ?? "QRIS toko"} style={{ maxWidth: 220 }} />
               <p style={{ color: "var(--muted)", fontSize: 14 }}>
-                {p.bayar.qrisNama ?? "QRIS toko"}. Kirim bukti bayar lewat WhatsApp setelah
-                membayar.
+                {p.bayar.qrisNama ?? "QRIS toko"}. Setelah membayar, lampirkan bukti di
+                bawah atau kirim lewat WhatsApp.
               </p>
             </>
           ) : (
@@ -299,18 +336,35 @@ function KartuLacak({
             </p>
           )}
           <div style={{ marginTop: 12 }}>
-            <button
-              className="btn"
-              type="button"
-              onClick={() => void tandaiSudahBayar()}
-              disabled={kirim}
-              aria-busy={kirim}
-            >
-              {kirim ? "Mengirim" : "Saya sudah bayar"}
-            </button>
+            <label htmlFor="bukti-bayar" style={{ fontSize: 14, fontWeight: 600, display: "block", marginBottom: 6 }}>
+              Lampirkan bukti bayar (opsional)
+            </label>
+            <input
+              id="bukti-bayar"
+              className="rincian-input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => pilihBerkas(e.target.files?.[0] ?? null)}
+            />
+            {galatBerkas && (
+              <p style={{ color: "var(--danger)", fontSize: 14, marginTop: 6 }} role="alert">
+                {galatBerkas}
+              </p>
+            )}
+            <div style={{ marginTop: 10 }}>
+              <button
+                className="btn"
+                type="button"
+                onClick={() => void (berkas ? kirimBukti() : tandaiSudahBayar())}
+                disabled={kirim}
+                aria-busy={kirim}
+              >
+                {kirim ? "Mengirim" : berkas ? "Kirim bukti & tandai sudah bayar" : "Saya sudah bayar"}
+              </button>
+            </div>
             <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 8 }}>
-              Tandai di sini supaya toko mengecek mutasinya. Kirim juga foto bukti lewat
-              WhatsApp supaya lebih cepat diperiksa.
+              Tandai di sini supaya toko mengecek mutasinya. Bukti boleh dilampirkan di sini
+              atau dikirim lewat WhatsApp.
             </p>
             {galatBayar && (
               <p style={{ color: "var(--danger)", fontSize: 14, marginTop: 8 }} role="alert">
