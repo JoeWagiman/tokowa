@@ -1,8 +1,38 @@
 # Tokowa.app
 
-A WhatsApp-first local marketplace. Buyers shop by chatting, get matched to the
-nearest stall, then choose fulfillment: instant courier, seller delivery, or
-self pickup. Live demo: <https://tokowa.app>
+Sell on WhatsApp without owning a WhatsApp Business API account.
+Live demo: <https://tokowa.app>
+
+## The problem
+
+To sell through the WhatsApp Business API (WABA), a business must clear three
+gates: a Meta-approved sender number, a legal business entity, and a credit
+card for billing. In practice even that is not enough: Meta's onboarding is
+tricky and effectively limited to certain people, even when going through a
+tech provider.
+
+We felt this first-hand. As the developers of [obrool.com](https://obrool.com),
+a legally incorporated company and an approved Meta tech provider, we hit
+this wall on day one while onboarding a high-volume prospect: no business
+legality, no credit card, and no willingness to get one. The deal died on
+paperwork, not on product.
+
+That prospect is the rule, not the exception: warung owners, laundry shops,
+car washes, housekeepers, and other micro-businesses sell every day on
+WhatsApp, but almost none of them can (or want to) register for WABA.
+
+## The solution
+
+Tokowa.app is one shared storefront on top of **one platform WhatsApp number**.
+Sellers ride on Tokowa's approved sender instead of registering their own:
+
+- **No WABA registration:** no Meta application, no business legality
+  documents, no credit card.
+- **No app to install:** buyers order by chatting; sellers manage everything
+  from the web dashboard.
+- **Not only shops:** works for goods (warung, stalls) and services
+  (laundry, car wash, housekeeping): anything with a price list and a
+  fulfillment step.
 
 This repo is the **storefront frontend** (Next.js App Router). The backend
 (agents, WhatsApp Cloud API, payments, logistics) lives in a separate project,
@@ -67,13 +97,13 @@ between the two projects is documented in `docs/rencana-kontrak-api.md`
 
 ## Project layout
 
-- `src/app/` — routes: `/` landing, `/katalog`, `/produk/[id]`, `/keranjang`,
+- `src/app/`: routes `/` landing, `/katalog`, `/produk/[id]`, `/keranjang`,
   `/lacak`, `/pesanan-saya`, `/toko-saya/[agentId]/*` (seller), `/admin/*`,
   `/api/*` (BFF + webhooks)
-- `src/components/` — shared UI (`site.tsx` header/footer, order/cart forms)
-- `src/lib/` — API client, cart, order-history (localStorage), formatting
-- `docs/rencana-kontrak-api.md` — API contract with obrool (Indonesian)
-- `DESIGN.md` — brand direction (Indonesian)
+- `src/components/`: shared UI (`site.tsx` header/footer, order/cart forms)
+- `src/lib/`: API client, cart, order-history (localStorage), formatting
+- `docs/rencana-kontrak-api.md`: API contract with obrool (Indonesian)
+- `DESIGN.md`: brand direction (Indonesian)
 
 ## Notes for reviewers
 
