@@ -53,9 +53,11 @@ export default async function HalamanPengaturan({
           <aside>
             <nav className="menu-seller">
               <Link href="/toko-saya">Toko saya</Link>
+              <Link href={`/toko-saya/${agentId}/beranda`}>Beranda</Link>
               <Link href={`/toko-saya/${agentId}/produk`}>Produk</Link>
               <Link href={`/toko-saya/${agentId}/pesanan`}>Pesanan</Link>
               <Link href={`/toko-saya/${agentId}/retur`}>Retur</Link>
+              <Link href={`/toko-saya/${agentId}/sengketa`}>Sengketa</Link>
               <Link className="aktif" href={`/toko-saya/${agentId}/pengaturan`}>Pengaturan toko</Link>
             </nav>
           </aside>

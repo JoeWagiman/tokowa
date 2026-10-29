@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { TopNav, Footer } from "@/components/site";
 import { obrool, ApiError } from "@/lib/api";
 import { sesiToken } from "@/lib/sesi";
+import { CabutSuspensi } from "./cabut-suspensi";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Daftar penjual" };
@@ -15,6 +16,10 @@ type Item = {
   statusKyc: string | null;
   catatan: string | null;
   jumlahProduk: number;
+  teguranAktif: number;
+  ambangTeguran: number;
+  tersuspensi: boolean;
+  suspensiAlasan: string | null;
   createdAt: string;
 };
 
@@ -57,6 +62,7 @@ export default async function HalamanAdminPenjual({
           <nav style={{ display: "flex", gap: 18, marginBottom: 18, fontWeight: 500 }}>
             <Link href="/admin/verifikasi" style={{ color: "var(--muted)" }}>Verifikasi</Link>
             <Link href="/admin/penjual" style={{ color: "var(--accent-ink)", fontWeight: 600 }}>Penjual</Link>
+            <Link href="/admin/sengketa" style={{ color: "var(--muted)" }}>Sengketa</Link>
           </nav>
           <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 16 }}>Daftar penjual</h1>
 
@@ -87,6 +93,7 @@ export default async function HalamanAdminPenjual({
                   <th>Pemilik</th>
                   <th>Produk</th>
                   <th>Verifikasi</th>
+                  <th>Teguran</th>
                   <th></th>
                 </tr>
               </thead>
@@ -104,9 +111,23 @@ export default async function HalamanAdminPenjual({
                       <span className={cw[a.statusKyc ?? ""] ?? "chip chip-muted"}>{cl[a.statusKyc ?? ""] ?? "Belum diajukan"}</span>
                     </td>
                     <td>
-                      <a href={`/toko/${a.agentId}`} style={{ color: "var(--accent-ink)", fontWeight: 600, fontSize: 13 }}>
-                        Lihat toko
-                      </a>
+                      {a.tersuspensi ? (
+                        <span className="chip chip-warn">Disuspensi</span>
+                      ) : a.teguranAktif > 0 ? (
+                        <span>
+                          {a.teguranAktif} dari {a.ambangTeguran}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--muted)" }}>Bersih</span>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                        <a href={`/toko/${a.agentId}`} style={{ color: "var(--accent-ink)", fontWeight: 600, fontSize: 13 }}>
+                          Lihat toko
+                        </a>
+                        {a.tersuspensi && <CabutSuspensi agentId={a.agentId} nama={a.nama} />}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -20,6 +20,20 @@ export type LacakRetur = {
   diperbaruiAt: string;
 };
 
+export type LacakSengketa = {
+  kode: string;
+  status: string;
+  statusLabel: string;
+  batasTokoAt: string | null;
+  alasanTolakToko: string | null;
+  putusan: string | null;
+  putusanLabel: string | null;
+  refundTotal: number;
+  catatanPutusan: string | null;
+  dibuatAt: string;
+  diperbaruiAt: string;
+};
+
 export type LacakPesanan = {
   id: string;
   kode: string;
@@ -35,6 +49,8 @@ export type LacakPesanan = {
   bayar: { metode: string | null; qrisNama: string | null; qrisUrl: string | null } | null;
   bisaBatal: boolean;
   bisaRetur: boolean;
+  bisaSengketa: boolean;
+  sengketa: LacakSengketa | null;
   jendelaReturHari: number;
   ongkirRetur: string;
   retur: LacakRetur | null;

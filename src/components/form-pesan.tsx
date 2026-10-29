@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { rp } from "@/lib/format";
 import { tambahKeranjang } from "@/lib/keranjang";
+import { catatPesanan } from "@/lib/riwayat";
 import {
   type ModeKirim,
   PILIHAN_MODE,
@@ -88,6 +89,13 @@ export function FormPesan({
       return;
     }
     const digit = pelanggan.replace(/\D/g, "");
+    catatPesanan({
+      kode: hasil.kode,
+      hp4: digit.slice(-4),
+      toko,
+      total: kutipan?.total ?? 0,
+      dibuatAt: new Date().toISOString(),
+    });
     router.push(`/lacak?kode=${encodeURIComponent(hasil.kode)}&hp=${digit.slice(-4)}`);
   }
 

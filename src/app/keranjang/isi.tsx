@@ -21,6 +21,7 @@ import {
   useLokasiPembeli,
   validasiPesanan,
 } from "@/lib/pesan-klien";
+import { catatPesanan } from "@/lib/riwayat";
 import { BlokLokasi } from "@/components/blok-lokasi";
 
 export function IsiKeranjang() {
@@ -69,6 +70,13 @@ export function IsiKeranjang() {
     }
     kosongkanKeranjang();
     const digit = pelanggan.replace(/\D/g, "");
+    catatPesanan({
+      kode: hasil.kode,
+      hp4: digit.slice(-4),
+      toko,
+      total: kutipan?.total ?? 0,
+      dibuatAt: new Date().toISOString(),
+    });
     router.push(`/lacak?kode=${encodeURIComponent(hasil.kode)}&hp=${digit.slice(-4)}`);
   }
 

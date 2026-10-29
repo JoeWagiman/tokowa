@@ -185,6 +185,8 @@ function KartuLacak({
   const [bukaRetur, setBukaRetur] = useState(false);
   const [alasan, setAlasan] = useState(ALASAN_RETUR[0].nilai);
   const [catatan, setCatatan] = useState("");
+  const [bukaSengketa, setBukaSengketa] = useState(false);
+  const [alasanSengketa, setAlasanSengketa] = useState("");
 
   async function minta(endpoint: string, isi: Record<string, unknown>) {
     setSibuk(true);
@@ -223,6 +225,15 @@ function KartuLacak({
     if (berhasil) {
       setBukaRetur(false);
       setCatatan("");
+    }
+  }
+
+  async function kirimSengketa(e: React.FormEvent) {
+    e.preventDefault();
+    const berhasil = await minta("/api/lacak/sengketa", { alasan: alasanSengketa.trim() });
+    if (berhasil) {
+      setBukaSengketa(false);
+      setAlasanSengketa("");
     }
   }
 
@@ -487,6 +498,102 @@ function KartuLacak({
               {sibuk ? "Mengirim" : "Kirim pengajuan"}
             </button>
             <button className="btn btn-ghost" type="button" onClick={() => setBukaRetur(false)} disabled={sibuk}>
+              Urungkan
+            </button>
+          </div>
+        </form>
+      )}
+
+      {p.sengketa && (
+        <div className="lacak-retur">
+          <div className="lacak-head">
+            <h3 style={{ fontSize: 16, fontWeight: 700 }}>Sengketa {p.sengketa.kode}</h3>
+            <span
+              className={
+                p.sengketa.status !== "selesai"
+                  ? "chip chip-warn"
+                  : p.sengketa.putusan === "untuk_pembeli"
+                    ? "chip chip-ok"
+                    : "chip chip-muted"
+              }
+            >
+              {p.sengketa.status === "selesai"
+                ? (p.sengketa.putusanLabel ?? "Selesai")
+                : p.sengketa.statusLabel}
+            </span>
+          </div>
+          {p.sengketa.status === "menunggu_toko" && (
+            <p style={{ color: "var(--muted)", fontSize: 14 }}>
+              Toko menjawab dulu
+              {p.sengketa.batasTokoAt
+                ? `, paling lambat ${new Date(p.sengketa.batasTokoAt).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`
+                : ""}
+              . Bila toko menolak atau lewat batas, admin Tokowa menengahi.
+            </p>
+          )}
+          {p.sengketa.status === "menunggu_admin" && (
+            <p style={{ color: "var(--muted)", fontSize: 14 }}>
+              Sedang diperiksa admin Tokowa.
+              {p.sengketa.alasanTolakToko ? ` Alasan toko: ${p.sengketa.alasanTolakToko}.` : ""}{" "}
+              Hasilnya tampil di sini.
+            </p>
+          )}
+          {p.sengketa.status === "selesai" && p.sengketa.putusan === "untuk_pembeli" && (
+            <p style={{ fontSize: 14 }}>
+              {p.sengketa.refundTotal > 0 ? (
+                <>
+                  Refund tercatat: <strong>{rp(p.sengketa.refundTotal)}</strong>. Toko mengirim
+                  buktinya lewat WhatsApp.
+                </>
+              ) : (
+                "Sengketa dimenangkan untukmu tanpa refund."
+              )}
+            </p>
+          )}
+          {p.sengketa.status === "selesai" && p.sengketa.putusan === "untuk_toko" && (
+            <p style={{ color: "var(--muted)", fontSize: 14 }}>
+              Admin memutuskan untuk toko
+              {p.sengketa.catatanPutusan ? `: ${p.sengketa.catatanPutusan}` : ""}. Kalau masih
+              ada yang belum jelas, hubungi toko lewat WhatsApp.
+            </p>
+          )}
+        </div>
+      )}
+
+      {p.bisaSengketa && !bukaSengketa && (
+        <div className="lacak-aksi">
+          <button className="btn btn-ghost" type="button" onClick={() => setBukaSengketa(true)}>
+            Ajukan sengketa
+          </button>
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>
+            Untuk pesanan yang retur ditolak atau masa retur sudah lewat. Admin Tokowa yang
+            memutuskan.
+          </p>
+        </div>
+      )}
+
+      {p.bisaSengketa && bukaSengketa && (
+        <form className="lacak-retur" onSubmit={kirimSengketa}>
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Ajukan sengketa</h3>
+          <label htmlFor="alasan-sengketa">Ceritakan masalahnya</label>
+          <textarea
+            id="alasan-sengketa"
+            name="alasan"
+            value={alasanSengketa}
+            onChange={(e) => setAlasanSengketa(e.target.value)}
+            maxLength={300}
+            rows={3}
+            required
+            placeholder="Contoh: barang datang pecah, toko menolak retur"
+          />
+          <p style={{ color: "var(--muted)", fontSize: 14 }}>
+            Admin Tokowa memeriksa pesanan dan riwayat returmu sebelum memutuskan.
+          </p>
+          <div className="baris-aksi">
+            <button className="btn" type="submit" disabled={sibuk} aria-busy={sibuk}>
+              {sibuk ? "Mengirim" : "Kirim sengketa"}
+            </button>
+            <button className="btn btn-ghost" type="button" onClick={() => setBukaSengketa(false)} disabled={sibuk}>
               Urungkan
             </button>
           </div>

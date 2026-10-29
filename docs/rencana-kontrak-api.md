@@ -294,9 +294,10 @@ env itu, kirim adalah no-op (persis pola nomor WA belum diatur).
 - Kejadian yang dikirim: `order.status_changed` setiap transisi status
   `TokoPesanan` (buat pesanan web `tunggu_bayar`, konfirmasi bayar pembeli
   `tunggu_verifikasi`, `terapkanPesananPaid` → `paid`, aksi seller
-  kirim/selesai/tolak/batal, batal pembeli dari web) dan `retur.updated` setiap
+  kirim/selesai/tolak/batal, batal pembeli dari web), `retur.updated` setiap
   perubahan `TokoRetur` (pengajuan `ajukan`, putusan `setuju`/`tolak`,
-  `terima_barang`, `refund` → `selesai`).
+  `terima_barang`, `refund` → `selesai`), dan `dispute.opened` /
+  `dispute.decided` untuk sengketa (bagian 4.14).
 - Format: POST JSON `{id: "evt_<uuid>", type, version: 1, occurredAt, data}`.
   Header `x-tokowa-timestamp` (unix detik) dan `x-tokowa-signature` =
   `sha256=` + HMAC-SHA256 hex dari `<timestamp>.<body mentah>`.
@@ -314,8 +315,7 @@ env itu, kirim adalah no-op (persis pola nomor WA belum diatur).
   balasan `{data: {received: true}}` atau `{data: {received: true, duplikat:
   true}}`. Saat ini penerima hanya mencatat log terstruktur `[webhook-obrool]`;
   konsumen nyata (invalidasi cache / notifikasi pembeli) menyusul bila polling
-  mulai berat. `dispute.decided` ditunda: belum ada model sengketa, retur
-  menutup kasus barang bermasalah.
+  mulai berat.
 
 ### 4.13 Webhook WhatsApp masuk (Meta → obrool; Tokowa tidak di jalur chat)
 Jalur belanja inti Tokowa adalah chat di satu nomor WhatsApp. Webhook Meta
@@ -346,6 +346,50 @@ dipasang dan dimiliki obrool; Tokowa sama sekali tidak meneruskan body Meta.
   tangan untuk `phone_number_id` asing `200` diam, POST pesan pembeli
   bertanda tangan ke agent yang dikonfigurasi membuat pesanan `draf`,
   POST duplikat `wamid` yang sama tidak membuat pesanan kedua.
+
+### 4.14 Sengketa dua tahap (publik + penjual + admin)
+Eskalasi setelah retur, **dua tahap**: toko menjawab dulu, admin menengahi.
+Model `TokoSengketa` (kode `S` + 5 huruf terakhir id). Status:
+`menunggu_toko | menunggu_admin | selesai`; putusan
+`untuk_pembeli | untuk_toko`. Putusan admin bersifat penengahan tercatat;
+uang tetap bergerak langsung pembeli↔toko (platform tidak memegang dana).
+
+- `POST /api/v1/pesanan/sengketa` → body `{kode, hp, alasan}` (verifikasi
+  kode+4 angka seperti lacak; alasan 5-300 karakter). Hanya pesanan
+  `paid`/`kirim`/`selesai`, dan hanya bila retur terakhir `ditolak` atau masa
+  retur sudah lewat; retur yang masih berjalan harus diputuskan dulu. Satu
+  sengketa aktif per pesanan (dobel → `409`). Balasan `201 {data: {kode,
+  status, pesan}}`. Rate limit 5 per 10 menit per IP.
+- **Tahap toko (maks 3 hari).** `GET /api/v1/seller/sengketa?agentId=`
+  (aktif; `status=riwayat` untuk selesai) dan
+  `POST /api/v1/seller/sengketa/{id}/aksi` `{aksi: setuju|tolak, nominal?,
+  alasan?}` (auth pemilik). Setuju = refund nominal seller → selesai, tercatat
+  di ledger, **tanpa teguran**. Tolak wajib alasan → naik ke admin. Lewat
+  batas tanpa jawaban, tahap naik sendiri ke admin saat berikutnya dibaca
+  (eskalasi malas, tanpa cron).
+- **Tahap admin.** `GET /api/v1/admin/sengketa?status=menunggu_admin|
+  menunggu_toko|selesai|semua` (auth role admin) dengan toko, kode pesanan,
+  total, ringkasan item, alasan toko, nomor pembeli termask.
+  `POST /api/v1/admin/sengketa/{id}/aksi` `{keputusan: untuk_pembeli|
+  untuk_toko, refundTotal?, catatan?}`; `untuk_toko` wajib catatan. Hanya
+  sengketa `menunggu_admin` yang bisa diputuskan admin (selain itu `409`).
+- **Teguran & suspensi.** Putusan admin `untuk_pembeli` mencatat satu
+  `TokoTeguran` (toko yang menyelesaikan sendiri di tahap toko tidak kena).
+  **3 teguran dalam 90 hari → toko disuspensi** (`TokoSetting.tersuspensi`):
+  produk hilang dari katalog, quote/buat pesanan web `403`, bot platform
+  melewati toko itu, pesanan chat baru ditolak. Admin mencabut lewat
+  `POST /api/v1/admin/suspensi` `{agentId}`; teguran tidak dihapus, gugur
+  sendiri setelah 90 hari. `GET /api/v1/admin/sellers` ikut memuat
+  `teguranAktif`, `ambangTeguran`, dan status suspensi. Penjual melihat
+  tegurannya di Beranda (4.4/`/api/v1/seller/analitik`).
+- Lacak (`4.8`) ikut mengembalikan `bisaSengketa` dan `sengketa`
+  (`{kode, status, statusLabel, batasTokoAt, alasanTolakToko, putusan,
+  putusanLabel, refundTotal, catatanPutusan, ...}`).
+- Webhook: `dispute.opened` (dibuka), `dispute.escalated` (naik ke admin),
+  `dispute.decided` (diputuskan, membawa tahap putusan), lihat bagian 4.12.
+- Tokowa: BFF `POST /api/lacak/sengketa`, blok sengketa + form di kartu
+  `/lacak`, halaman penjual `/toko-saya/[agentId]/sengketa`, halaman admin
+  `/admin/sengketa`, dan cabut suspensi di `/admin/penjual`.
 
 ## 5. Keputusan yang sudah dikunci
 
@@ -399,8 +443,12 @@ dipasang dan dimiliki obrool; Tokowa sama sekali tidak meneruskan body Meta.
   seller (transfer manual), sistem hanya mencatat dan menyesuaikan ledger.
   Penolakan tidak otomatis mengubah stok; pengembalian stok hanya saat seller
   menandai barang layak jual.
-- **Sengketa ditunda.** Belum ada model `Dispute`; retur menutup kasus barang
-  bermasalah sampai ada alur sengketa yang jelas.
+- **Sengketa dua tahap: toko menjawab dulu, admin menengahi.** Pembeli baru
+  bisa membuka sengketa setelah retur ditolak atau masa retur lewat (retur
+  tetap jalur pertama). Admin hanya memutuskan sengketa yang ditolak/diabaikan
+  toko; putusannya penengahan tercatat karena uang bergerak langsung
+  pembeli↔toko. Sengketa yang dimenangkan pembeli di tahap admin menjadi
+  teguran; 3 teguran dalam 90 hari menyuspensi toko (bagian 4.14).
 - **WA number belum diatur.** Semua tombol WhatsApp nonaktif dengan
   `title="Nomor WhatsApp belum diatur"`. Ini keadaan yang disengaja, bukan bug.
 
@@ -411,7 +459,9 @@ Tokowa tidak di jalur; bagian 4.13), **pelacakan pesanan pembeli** (bagian 4.8),
 **quote + buat pesanan web** (bagian 4.9), **konfirmasi bayar pembeli**
 (bagian 4.10), **keranjang multi-produk** (bagian 4.9, sisi Tokowa),
 **pembatalan + retur pembeli/penjual** (bagian 4.11), **webhook balik**
-(bagian 4.12), dan **tarif `courier_instant`** (bagian 4.9).
+(bagian 4.12), **tarif `courier_instant`** (bagian 4.9), **sengketa**
+(bagian 4.14), **beranda penjual** (`/api/v1/seller/analitik`), dan **pesanan
+saya** (riwayat lokal pembeli di Tokowa).
 
 ## 7. Masih terbuka
 

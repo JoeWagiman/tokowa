@@ -15,6 +15,7 @@ export function TopNav() {
         <nav className="nav">
           <Link href="/katalog">Katalog</Link>
           <Link href="/lacak">Lacak pesanan</Link>
+          <Link href="/pesanan-saya">Pesanan saya</Link>
         </nav>
         <PenandaKeranjang />
         {wa ? (

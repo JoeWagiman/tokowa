@@ -44,9 +44,12 @@ export default async function HalamanAdminVerifikasi() {
           <nav style={{ display: "flex", gap: 18, marginBottom: 18, fontWeight: 500 }}>
             <Link href="/admin/verifikasi" style={{ color: "var(--accent-ink)", fontWeight: 600 }}>Verifikasi</Link>
             <Link href="/admin/penjual" style={{ color: "var(--muted)" }}>Penjual</Link>
+            <Link href="/admin/sengketa" style={{ color: "var(--muted)" }}>Sengketa</Link>
           </nav>
           <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 6 }}>Antrean verifikasi penjual</h1>
-          <p style={{ color: "var(--muted)", marginBottom: 20 }}>[perkiraan waktu] kerja di sana</p>
+          <p style={{ color: "var(--muted)", marginBottom: 20 }}>
+            Putuskan pengajuan penjual. Hasilnya langsung terlihat penjual di halaman Status verifikasi.
+          </p>
           {galat && (
             <div className="galat">
               <h3>Antrean tidak bisa dimuat</h3>
