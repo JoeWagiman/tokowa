@@ -78,6 +78,12 @@ pernah dari janji chat.
 ## 4. Endpoint yang sudah jalan
 
 ### 4.1 Auth dan onboarding penjual (BFF Tokowa)
+- Mode waitlist aktif: halaman `/masuk` dan `/daftar-akun` menampilkan form
+  waitlist (nama + nomor WhatsApp + email opsional) yang dikirim ke
+  `POST /api/waitlist`. BFF memvalidasi lalu meneruskan ke
+  `WAITLIST_FORWARD_URL` (endpoint eksternal); kosong berarti pendaftaran belum
+  dibuka (`503` dengan pesan jujur). Login dan pendaftaran akun tertutup untuk
+  semua orang selama mode ini.
 - `POST /api/session/daftar` (Tokowa) menerima `{nama, email, password}`,
   memanggil `POST /api/auth/register` obrool. Akun baru wajib verifikasi email
   sebelum bisa dipakai `POST /api/session`.
