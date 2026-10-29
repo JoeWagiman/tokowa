@@ -41,12 +41,12 @@ export function FormKyc({ awal, r2Idup }: { awal: Awal; r2Idup: boolean }) {
     try {
       const res = await fetch("/api/proxy/v1/seller/kyc/file", { method: "POST", body: fd });
       const body = await res.json().catch(() => null);
-      if (!res.ok || !body?.data?.url) {
+      if (!res.ok || (!body?.data?.key && !body?.data?.url)) {
         setUnggah(body?.error?.message ?? body?.error ?? "Unggahan gagal.");
         return;
       }
-      if (tujuan === "ktp") setUrlKtp(body.data.url);
-      else setUrlNpwp(body.data.url);
+      if (tujuan === "ktp") setUrlKtp(body.data.key ?? body.data.url);
+      else setUrlNpwp(body.data.key ?? body.data.url);
       setUnggah(tujuan === "ktp" ? "Foto KTP terunggah." : "Foto NPWP terunggah.");
     } catch {
       setUnggah("Masalah ke server. Coba lagi nanti.");

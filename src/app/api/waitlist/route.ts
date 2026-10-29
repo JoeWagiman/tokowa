@@ -25,7 +25,10 @@ const digit = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (!boleh(ip)) {
-    return galat("rate_limited", "Terlalu banyak percobaan. Coba lagi nanti.", 429);
+    return NextResponse.json(
+      { error: { code: "rate_limited", message: "Terlalu banyak percobaan. Coba lagi nanti." } },
+      { status: 429, headers: { "Retry-After": "3600" } }
+    );
   }
 
   let body: Record<string, unknown>;

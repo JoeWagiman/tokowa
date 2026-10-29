@@ -16,11 +16,16 @@ type Item = {
   alamat: string;
   fotoKtp: string;
   fotoNpwp: string | null;
+  fotoKtpKey: string | null;
+  fotoNpwpKey: string | null;
   status: string;
   catatan: string | null;
   createdAt: string;
   user: { name: string | null; email: string | null };
 };
+
+const tautanDokumen = (key: string | null, mentah: string | null) =>
+  `/api/proxy/v1/admin/kyc/file?key=${encodeURIComponent(key ?? mentah ?? "")}`;
 
 export default async function HalamanAdminVerifikasi() {
   const token = await sesiToken();
@@ -79,8 +84,8 @@ export default async function HalamanAdminVerifikasi() {
                 <dt>Alamat</dt><dd style={{ margin: 0, color: "var(--ink)" }}>{k.alamat}</dd>
               </dl>
               <div className="baris-aksi" style={{ marginBottom: 14 }}>
-                <a className="btn btn-ghost" style={{ padding: "5px 12px", fontSize: 13 }} href={k.fotoKtp} target="_blank" rel="noreferrer">Buka foto KTP</a>
-                {k.fotoNpwp && <a className="btn btn-ghost" style={{ padding: "5px 12px", fontSize: 13 }} href={k.fotoNpwp} target="_blank" rel="noreferrer">Buka foto NPWP</a>}
+                <a className="btn btn-ghost" style={{ padding: "5px 12px", fontSize: 13 }} href={tautanDokumen(k.fotoKtpKey, k.fotoKtp)} target="_blank" rel="noreferrer">Buka foto KTP</a>
+                {k.fotoNpwp && <a className="btn btn-ghost" style={{ padding: "5px 12px", fontSize: 13 }} href={tautanDokumen(k.fotoNpwpKey, k.fotoNpwp)} target="_blank" rel="noreferrer">Buka foto NPWP</a>}
               </div>
               <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "12px 0" }} />
               <KeputusanKyc id={k.id} />
