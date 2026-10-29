@@ -112,3 +112,17 @@ between the two projects is documented in `docs/rencana-kontrak-api.md`
 - Buyer checkout is guest-based (no account); seller/admin areas require login.
 - Order tracking needs only an order code plus the last 4 digits of the buyer’s
   WhatsApp number.
+
+## Build timeline (Meta hackathon starts Oct 26, 2026)
+
+Built before the hackathon (Oct 17–18): catalog storefront, seller dashboard,
+seller KYC + admin queue, order tracking, web ordering with shipping quotes,
+buyer payment confirmation, multi-product cart, cancellation and returns.
+
+Built during the hackathon (Oct 28–30): signed outbound webhooks, WhatsApp
+webhook ownership docs, distance-based instant-courier tariffs, web receipt
+upload (R2), normalized v1 seller API, seller home dashboard, buyer order
+history, two-stage disputes with strikes and suspension, seller onboarding
+(signup + create store), waitlist mode with interest field, landing redesign
+with motion system, English README, and a full security audit with remediation.
+The schedule above is verifiable per commit via `git log` (times in WIB).
