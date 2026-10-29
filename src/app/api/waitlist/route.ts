@@ -48,6 +48,16 @@ export async function POST(request: NextRequest) {
     return galat("bad_request", "Email tidak valid. Kosongkan bila tidak ada.", 400);
   }
 
+  const MINAT: Record<string, string> = {
+    penjual: "Penjual",
+    pembeli: "Pembeli",
+    coba: "Coba-coba saja",
+  };
+  const minat = MINAT[String(body.minat ?? "")] ?? "";
+  if (!minat) {
+    return galat("bad_request", "Pilih dulu minatmu: penjual, pembeli, atau coba-coba saja.", 400);
+  }
+
   const tujuan = process.env.WAITLIST_FORWARD_URL?.trim() ?? "";
   if (!tujuan) {
     return galat("unavailable", "Pendaftaran belum dibuka. Coba lagi nanti.", 503);
@@ -61,6 +71,7 @@ export async function POST(request: NextRequest) {
         nama,
         whatsapp,
         email: emailMentah || null,
+        minat,
         sumber: "tokowa.app",
         waktu: new Date().toISOString(),
       }),
