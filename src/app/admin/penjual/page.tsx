@@ -86,7 +86,8 @@ export default async function HalamanAdminPenjual({
           )}
 
           {!galat && items.length > 0 && (
-            <table className="tabel">
+            <div className="tabel-wrap">
+              <table className="tabel">
               <thead>
                 <tr>
                   <th>Toko</th>
@@ -131,8 +132,9 @@ export default async function HalamanAdminPenjual({
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </main>

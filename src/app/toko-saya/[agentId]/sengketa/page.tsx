@@ -148,15 +148,16 @@ export default async function HalamanSengketaToko({
                 <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--muted)" }}>
                   Sengketa selesai ({riwayat.length})
                 </summary>
-                <table className="tabel" style={{ marginTop: 12 }}>
-                  <thead>
-                    <tr>
-                      <th>Waktu</th>
-                      <th>Kode</th>
-                      <th>Hasil</th>
-                      <th>Refund</th>
-                    </tr>
-                  </thead>
+                <div className="tabel-wrap" style={{ marginTop: 12 }}>
+                  <table className="tabel">
+                    <thead>
+                      <tr>
+                        <th>Waktu</th>
+                        <th>Kode</th>
+                        <th>Hasil</th>
+                        <th>Refund</th>
+                      </tr>
+                    </thead>
                   <tbody>
                     {riwayat.map((s) => (
                       <tr key={s.id}>
@@ -172,8 +173,9 @@ export default async function HalamanSengketaToko({
                         <td>{s.refundTotal > 0 ? rp(s.refundTotal) : "-"}</td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </details>
             )}
           </section>

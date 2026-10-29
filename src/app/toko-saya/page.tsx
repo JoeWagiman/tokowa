@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { TopNav, Footer } from "@/components/site";
 import { TombolKeluar } from "@/components/tombol-keluar";
+import { BuatToko } from "./buat-toko";
 import { obrool, ApiError } from "@/lib/api";
 import { sesiToken } from "@/lib/sesi";
 
@@ -85,9 +86,11 @@ export default async function TokoSaya() {
             {!galat && agents.length === 0 && (
               <div className="kosong">
                 <h3>Belum ada toko.</h3>
-                <p>Toko dibuat lewat tonda agent di obrool.</p>
+                <p>Buat tokomu di bawah, lalu isi produk dan pengaturannya.</p>
               </div>
             )}
+
+            {!galat && agents.length === 0 && <BuatToko />}
 
             {agents.length > 0 && (
               <div className="prod-grid">
@@ -99,14 +102,14 @@ export default async function TokoSaya() {
                         Kanal WhatsApp · {a.channelConfig?.tokoEnabled === true ? "aktif" : "nonaktif"}
                       </div>
                       <div className="prod-bottom" style={{ marginTop: 8 }}>
-                        <Link className="btn" style={{ padding: "6px 14px", fontSize: 13 }} href={`/toko-saya/${a.id}/pesanan`}>
+                        <Link className="btn" style={{ padding: "6px 14px", fontSize: 13 }} href={`/toko-saya/${a.id}/beranda`}>
+                          Buka dashboard
+                        </Link>
+                        <Link className="btn btn-ghost" style={{ padding: "6px 14px", fontSize: 13 }} href={`/toko-saya/${a.id}/pesanan`}>
                           Pesanan
                         </Link>
                         <Link className="btn btn-ghost" style={{ padding: "6px 14px", fontSize: 13 }} href={`/toko-saya/${a.id}/produk`}>
                           Produk
-                        </Link>
-                        <Link className="btn btn-ghost" style={{ padding: "6px 14px", fontSize: 13 }} href={`/toko-saya/${a.id}/pengaturan`}>
-                          Pengaturan
                         </Link>
                       </div>
                     </div>

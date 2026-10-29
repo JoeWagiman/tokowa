@@ -240,7 +240,8 @@ export function CrudProduk({ agentId, galatAwal }: { agentId: string; galatAwal:
             <h3>Belum ada produk{cari ? " yang cocok." : "."}</h3>
           </div>
         ) : (
-          <table className="tabel">
+          <div className="tabel-wrap">
+            <table className="tabel">
             <thead>
               <tr>
                 <th>Produk</th>
@@ -296,7 +297,8 @@ export function CrudProduk({ agentId, galatAwal }: { agentId: string; galatAwal:
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </section>
     </div>

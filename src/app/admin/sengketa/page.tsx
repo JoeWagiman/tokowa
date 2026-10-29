@@ -132,13 +132,14 @@ export default async function HalamanAdminSengketa() {
               <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--muted)" }}>
                 Sengketa selesai ({selesai.length})
               </summary>
-              <table className="tabel" style={{ marginTop: 12 }}>
-                <thead>
-                  <tr>
-                    <th>Waktu</th>
-                    <th>Kode</th>
-                    <th>Toko</th>
-                    <th>Putusan</th>
+              <div className="tabel-wrap" style={{ marginTop: 12 }}>
+                <table className="tabel">
+                  <thead>
+                    <tr>
+                      <th>Waktu</th>
+                      <th>Kode</th>
+                      <th>Toko</th>
+                      <th>Putusan</th>
                     <th>Refund</th>
                   </tr>
                 </thead>
@@ -159,7 +160,8 @@ export default async function HalamanAdminSengketa() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </details>
           )}
         </div>

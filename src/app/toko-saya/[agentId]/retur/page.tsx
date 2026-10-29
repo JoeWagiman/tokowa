@@ -167,11 +167,12 @@ export default async function HalamanRetur({
                 <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--muted)" }}>
                   Retur selesai & ditolak ({riwayat.length})
                 </summary>
-                <table className="tabel" style={{ marginTop: 12 }}>
-                  <thead>
-                    <tr>
-                      <th>Waktu</th>
-                      <th>Kode</th>
+                <div className="tabel-wrap" style={{ marginTop: 12 }}>
+                  <table className="tabel">
+                    <thead>
+                      <tr>
+                        <th>Waktu</th>
+                        <th>Kode</th>
                       <th>Alasan</th>
                       <th>Hasil</th>
                       <th>Refund</th>
@@ -193,8 +194,9 @@ export default async function HalamanRetur({
                         <td>{r.refundTotal > 0 ? rp(r.refundTotal) : "-"}</td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </details>
             )}
           </section>

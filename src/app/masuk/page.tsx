@@ -36,7 +36,7 @@ export default function HalamanMasuk() {
 
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <form onSubmit={kirim} style={{ width: 360, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 28 }} noValidate>
+      <form onSubmit={kirim} style={{ width: "min(360px, 100%)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 28 }} noValidate>
         <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 6 }}>Masuk</h1>
         <p style={{ color: "var(--muted)", marginBottom: 20 }}>Wajib untuk seller dan admin.</p>
         <label style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
@@ -70,7 +70,7 @@ export default function HalamanMasuk() {
           {sibuk ? "Memproses…" : "Masuk"}
         </button>
         <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 14, textAlign: "center" }}>
-          Belum punya akun? <Link href="/" style={{ color: "var(--accent-ink)", fontWeight: 600 }}>Kembali ke Tokowa</Link>
+          Belum punya akun? <Link href="/daftar-akun" style={{ color: "var(--accent-ink)", fontWeight: 600 }}>Daftar jadi penjual</Link>
         </p>
       </form>
     </main>

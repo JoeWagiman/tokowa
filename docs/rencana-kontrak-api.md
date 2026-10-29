@@ -77,10 +77,18 @@ pernah dari janji chat.
 
 ## 4. Endpoint yang sudah jalan
 
-### 4.1 Auth (BFF Tokowa)
+### 4.1 Auth dan onboarding penjual (BFF Tokowa)
+- `POST /api/session/daftar` (Tokowa) menerima `{nama, email, password}`,
+  memanggil `POST /api/auth/register` obrool. Akun baru wajib verifikasi email
+  sebelum bisa dipakai `POST /api/session`.
 - `POST /api/session` (Tokowa) menerima `{email, password}`, memanggil
   `POST /api/auth/login` obrool, menyimpan cookie `tokowa_token`.
 - `DELETE /api/session` (Tokowa) → logout.
+- `POST /api/toko` (Tokowa, butuh cookie sesi) menerima `{nama, setuju: true}`:
+  membuat ruang toko di obrool lalu mengaktifkan mode toko dengan persetujuan
+  skema biaya. Balasan `201 {data: {agentId, nama}}`. UI-nya ada di halaman
+  `/toko-saya` saat penjual belum punya toko, plus tautan `Masuk penjual` dan
+  `Daftar jadi penjual` di navigasi dan footer.
 
 ### 4.2 Katalog (publik, tanpa auth)
 - `GET /api/v1/catalog?q=&kota=&cursor=&limit=` (limit maks 60)
@@ -395,6 +403,9 @@ uang tetap bergerak langsung pembeli↔toko (platform tidak memegang dana).
 
 - **KYC satu backend.** Tidak ada state KYC yang disimpan di Tokowa; antrean
   admin di Tokowa adalah tampilan langsung dari obrool.
+- **Onboarding penjual milik Tokowa, identitas tetap di obrool.** Daftar,
+  masuk, dan buat toko tampil sebagai alur Tokowa; akun dan ruang toko
+  disimpan di obrool lewat BFF. Penjual tidak perlu membuka studio AI agent.
 - **Webhook `kyc.decided` dibatalkan** untuk F3. Antrean admin cukup menarik
   ulang data (pull). Webhook outbound ditunda; lihat bagian 7.
 - **Hapus permanen produk butuh konfirmasi nama.** Ini bertahan sebagai
@@ -471,6 +482,14 @@ saya** (riwayat lokal pembeli di Tokowa).
   usulan window 24 jam).
 - `message` error: tetap Indonesia + `code` stabil seperti sekarang, atau
   Tokowa melakukan i18n sendiri dari `code`.
+- Masuk dengan akun WhatsApp (OTP) **belum dibangun dan tidak dipalsukan**.
+  Syaratnya pengirim WhatsApp platform yang aktif: nomor WABA
+  (`WHATSAPP_CONSOLE_PHONE_NUMBER_ID`), token Meta (`whatsappToken`), dan
+  `NEXT_PUBLIC_WA_NUMBER` terisi. Selama itu kosong, auth Tokowa tetap
+  email+password dan tombol chat nonaktif. Setelah pengirim terverifikasi,
+  bangun `POST /api/session/wa/minta-kode` + verifikasi kode 6 digit
+  (`WhatsappAuthCode` purpose `login`, kedaluwarsa 15 menit, sekali pakai),
+  lalu sesuaikan copy halaman masuk.
 
 ## 8. Riwayat koreksi kontrak
 
