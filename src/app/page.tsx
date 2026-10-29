@@ -40,14 +40,17 @@ const caraTerima = [
   {
     nama: "Kurir instan",
     isi: "Ongkir dihitung dari jarak titikmu ke toko. Cocok untuk yang buru-buru.",
+    gambar: "/icon/kurir-instan.webp",
   },
   {
     nama: "Diantar toko",
     isi: "Tarif tetap dari toko. Pilih ini kalau tokonya memang mengantar.",
+    gambar: "/icon/diantar-toko.webp",
   },
   {
     nama: "Ambil sendiri",
     isi: "Gratis ongkir. Datang ke toko dan bawa pulang belanjaanmu.",
+    gambar: "/icon/ambil-sendiri.webp",
   },
 ];
 
@@ -163,6 +166,7 @@ export default function Landing() {
               {caraTerima.map((c, i) => (
                 <Ungkap key={c.nama} jeda={i * 60}>
                   <article className="kartu terima-kartu">
+                    <img className="terima-gambar" src={c.gambar} alt="" loading="lazy" width={640} height={640} />
                     <h3 style={{ fontSize: 16, fontWeight: 700 }}>{c.nama}</h3>
                     <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 6 }}>{c.isi}</p>
                   </article>

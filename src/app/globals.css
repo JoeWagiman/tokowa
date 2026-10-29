@@ -675,6 +675,33 @@ img {
   }
 }
 
+.terima-gambar {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  object-position: center 28%;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  animation: terima-apung 5s ease-in-out infinite alternate;
+}
+
+.terima-grid > *:nth-child(2) .terima-gambar {
+  animation-delay: -1.6s;
+}
+
+.terima-grid > *:nth-child(3) .terima-gambar {
+  animation-delay: -3.2s;
+}
+
+@keyframes terima-apung {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-5px);
+  }
+}
+
 .umpan-kartu,
 .terima-grid .kartu {
   transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
@@ -933,6 +960,12 @@ img {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
+  }
+
+  .footer-bawah {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 }
 
