@@ -1,10 +1,26 @@
 import Link from "next/link";
 import { TopNav, Footer } from "@/components/site";
 import { DemoChat } from "@/components/demo-chat";
+import { Pita } from "@/components/pita";
 import { Ungkap } from "@/components/ungkap";
 import { waLink } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
+
+const daftarJasa = [
+  "Laundry kiloan",
+  "Car wash",
+  "Housekeeper",
+  "Servis AC",
+  "Potong rambut",
+  "Jahit pakaian",
+  "Servis motor",
+  "Catering",
+  "Pijat",
+  "Tukang kebun",
+  "Les privat",
+  "Fotokopi",
+];
 
 const daftarPita = [
   "Beras",
@@ -120,15 +136,8 @@ export default function Landing() {
         </section>
 
         <section className="pita-bungkus" aria-label="Contoh kebutuhan yang bisa dicari">
-          <div className="pita" aria-hidden="true">
-            <div className="pita-dalam">
-              {[...daftarPita, ...daftarPita].map((x, i) => (
-                <span key={`${x}-${i}`} className="pita-chip">
-                  {x}
-                </span>
-              ))}
-            </div>
-          </div>
+          <Pita items={daftarPita} />
+          <Pita items={daftarJasa} balik />
         </section>
 
         <section className="section">

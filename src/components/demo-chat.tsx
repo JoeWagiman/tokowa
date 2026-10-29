@@ -32,6 +32,7 @@ const NASKAH: Langkah[] = [
 
 export function DemoChat() {
   const wadahRef = useRef<HTMLDivElement>(null);
+  const isiRef = useRef<HTMLDivElement>(null);
   const [jalan, setJalan] = useState(false);
   const [indeks, setIndeks] = useState(0);
   const [terketik, setTerketik] = useState("");
@@ -80,11 +81,15 @@ export function DemoChat() {
     return () => clearTimeout(t);
   }, [jalan, indeks]);
 
+  useEffect(() => {
+    isiRef.current?.scrollTo({ top: isiRef.current.scrollHeight });
+  }, [indeks, terketik]);
+
   return (
     <div ref={wadahRef} className="hp" role="img" aria-label="Contoh percakapan belanja: pembeli menanyakan beras dan minyak, agent mencarikan warung terdekat, pembeli memilih kurir lalu membalas YA, dan pesanan tercatat.">
       <div className="hp-bar">Tokowa</div>
 
-      <div className="hp-isi" aria-hidden="true">
+      <div ref={isiRef} className="hp-isi" aria-hidden="true">
         {NASKAH.slice(0, indeks + 1).map((l, i) => {
           if (l.jenis === "pesan") {
             return (
