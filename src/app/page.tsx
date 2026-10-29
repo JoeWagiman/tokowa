@@ -1,7 +1,83 @@
 import Link from "next/link";
 import { TopNav, Footer } from "@/components/site";
-import { IlustrasiWarung } from "@/components/ilustrasi-warung";
+import { DemoChat } from "@/components/demo-chat";
+import { Ungkap } from "@/components/ungkap";
 import { waLink } from "@/lib/api";
+
+export const dynamic = "force-dynamic";
+
+const daftarPita = [
+  "Beras",
+  "Minyak goreng",
+  "Telur",
+  "Gula pasir",
+  "Kopi",
+  "Mie instan",
+  "Gas LPG",
+  "Air galon",
+  "Sabun cuci",
+  "Bumbu dapur",
+  "Susu",
+  "Roti",
+];
+
+const contoh = [
+  {
+    tanya: "Beras 5 kg sama minyak 2 liter, ada?",
+    jawab: "Ketemu di warung 1,2 km darimu. Balas YA untuk pesan.",
+  },
+  {
+    tanya: "KURIR",
+    jawab: "Ongkir dihitung dari jarak toko. Total diperbarui sebelum kamu bayar.",
+  },
+  {
+    tanya: "Di mana pesananku?",
+    jawab: "Sudah dibayar dan disiapkan toko. Lacak dari kode pesananmu kapan saja.",
+  },
+];
+
+const caraTerima = [
+  {
+    nama: "Kurir instan",
+    isi: "Ongkir dihitung dari jarak titikmu ke toko. Cocok untuk yang buru-buru.",
+  },
+  {
+    nama: "Diantar toko",
+    isi: "Tarif tetap dari toko. Pilih ini kalau tokonya memang mengantar.",
+  },
+  {
+    nama: "Ambil sendiri",
+    isi: "Gratis ongkir. Datang ke toko dan bawa pulang belanjaanmu.",
+  },
+];
+
+const faq = [
+  {
+    tanya: "Apakah harus install aplikasi?",
+    jawab:
+      "Tidak. Semua lewat WhatsApp yang sudah ada di HP-mu: chat untuk belanja, web tokowa.app untuk katalog dan lacak pesanan.",
+  },
+  {
+    tanya: "Bagaimana cara membayar?",
+    jawab:
+      "Bayar ke QRIS milik toko, lalu tandai Sudah bayar di halaman lacak (boleh lampirkan bukti). Toko memeriksa mutasinya sebelum pesanan dikirim.",
+  },
+  {
+    tanya: "Bagaimana melacak pesanan?",
+    jawab:
+      "Buka halaman Lacak pesanan dengan kode pesanan dan 4 angka terakhir nomor WhatsApp-mu. Statusnya diperbarui setiap ada perubahan.",
+  },
+  {
+    tanya: "Bagaimana kalau barang bermasalah?",
+    jawab:
+      "Ajukan retur langsung dari halaman lacak selama masa retur toko. Kalau retur ditolak atau masanya lewat, buka sengketa dan admin Tokowa menengahi.",
+  },
+  {
+    tanya: "Untuk apa nomor WhatsApp saya dipakai?",
+    jawab:
+      "Hanya untuk memproses pesanan: konfirmasi, kabar status, dan verifikasi saat melacak. Tidak untuk yang lain.",
+  },
+];
 
 export default function Landing() {
   const wa = waLink("Halo Tokowa, aku mau belanja.");
@@ -11,8 +87,9 @@ export default function Landing() {
       <TopNav />
       <main>
         <section className="hero">
-          <div className="container hero-grid">
-            <div>
+          <div className="container">
+            <Ungkap>
+              <div className="hero-tengah">
               <h1>Belanja dari warung sekitar, cukup lewat WhatsApp.</h1>
               <p>
                 Satu nomor untuk semua warung di sekitar. Agent memandu kamu dari
@@ -32,43 +109,100 @@ export default function Landing() {
                   Lihat katalog
                 </Link>
               </div>
-            </div>
+              </div>
+            </Ungkap>
 
-            <IlustrasiWarung />
+            <DemoChat />
+          </div>
+        </section>
+
+        <section className="pita-bungkus" aria-label="Contoh kebutuhan yang bisa dicari">
+          <div className="pita" aria-hidden="true">
+            <div className="pita-dalam">
+              {[...daftarPita, ...daftarPita].map((x, i) => (
+                <span key={`${x}-${i}`} className="pita-chip">
+                  {x}
+                </span>
+              ))}
+            </div>
           </div>
         </section>
 
         <section className="section">
           <div className="container">
-            <h2>Cara belanja</h2>
-            <p style={{ color: "var(--muted)", marginTop: 8, maxWidth: "40em" }}>
-              Semua lewat satu percakapan WhatsApp. Beginilah alurnya dari pesan
-              pertama sampai barang dipilihkan.
-            </p>
-            <div className="alur">
-              <div className="alur-baris pembeli">
-                <div className="gelembung pembeli">Beras 5 kg sama minyak 2 liter, ada?</div>
-                <p className="alur-ket">
-                  <b>1 · Kirim pesan</b>
-                  <span>Buka WhatsApp Tokowa, tulis yang kamu cari.</span>
-                </p>
-              </div>
-              <div className="alur-baris agen">
-                <div className="gelembung agen">
-                  Ketemu warung terdekat yang stoknya ada. Balas YA untuk pesan, atau
-                  KURIR untuk kurir instan.
-                </div>
-                <p className="alur-ket">
-                  <b>2 · Dibantu agent</b>
-                  <span>Agent mencocokkan permintaan ke warung terdekat.</span>
-                </p>
-              </div>
-              <div className="alur-baris pembeli">
-                <div className="gelembung pembeli">KURIR</div>
-                <p className="alur-ket">
-                  <b>3 · Pilih cara terima</b>
-                  <span>Kurir instan, diantar penjual, atau ambil sendiri di toko.</span>
-                </p>
+            <div className="kepala-section">
+              <h2>Satu chat untuk semua kebutuhan</h2>
+              <p>
+                Contoh percakapan nyata yang bisa kamu lakukan. Tidak perlu hafal
+                perintah; tulis saja seperti chat biasa.
+              </p>
+            </div>
+            <div className="umpan">
+              {contoh.map((c, i) => (
+                <Ungkap key={c.tanya} jeda={i * 60}>
+                  <article className="umpan-kartu">
+                    <p className="umpan-tanya">{c.tanya}</p>
+                    <p className="umpan-jawab">{c.jawab}</p>
+                  </article>
+                </Ungkap>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="container">
+            <div className="kepala-section">
+              <h2>Pilih cara terima</h2>
+              <p>
+                Tiga pilihan di setiap pesanan. Ongkir selalu dihitung di depan,
+                sebelum kamu bayar.
+              </p>
+            </div>
+            <div className="terima-grid">
+              {caraTerima.map((c, i) => (
+                <Ungkap key={c.nama} jeda={i * 60}>
+                  <article className="kartu terima-kartu">
+                    <h3 style={{ fontSize: 16, fontWeight: 700 }}>{c.nama}</h3>
+                    <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 6 }}>{c.isi}</p>
+                  </article>
+                </Ungkap>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="container">
+            <div className="kepala-section">
+              <h2>Pertanyaan yang sering masuk</h2>
+            </div>
+            <div className="faq">
+              {faq.map((f) => (
+                <details key={f.tanya} className="faq-item">
+                  <summary>{f.tanya}</summary>
+                  <p>{f.jawab}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <div className="container">
+            <div className="cta-akhir">
+              <h2>Tokowa belum dibuka umum</h2>
+              <p>
+                Pendaftaran penjual masih bertahap. Gabung waitlist dan kami
+                menghubungimu lewat WhatsApp saat giliranmu tiba.
+              </p>
+              <div className="hero-cta">
+                <Link className="btn" href="/daftar-akun">
+                  Gabung waitlist
+                </Link>
+                <Link className="btn btn-ghost" href="/katalog">
+                  Lihat katalog dulu
+                </Link>
               </div>
             </div>
           </div>
