@@ -420,6 +420,9 @@ uang tetap bergerak langsung pembeli↔toko (platform tidak memegang dana).
   menyediakan aktivasi mandiri. Pengaturan Tokowa menampilkan status + tombol
   "Lanjut daftar di obrool" yang didahului peringatan syarat (NIB, kartu
   kredit, nomor belum terdaftar, Business Manager, waktu verifikasi).
+- **Onboarding di sisi obrool:** halaman `/waba` (menu Explore di sidebar,
+  di atas Template Marketplace) memandu penjual lewat syarat checklist,
+  pilih agent, dan tombol Embedded Signup Meta yang sudah ada.
 - **Handoff jujur di bot platform:** bila warung terpilih adalah lulusan,
   bot platform menyerahkan dengan tautan chat langsung lalu mundur; tidak
   berpura-pura menjadi toko itu. Satu pesanan tetap milik satu agent
