@@ -78,12 +78,14 @@ pernah dari janji chat.
 ## 4. Endpoint yang sudah jalan
 
 ### 4.1 Auth dan onboarding penjual (BFF Tokowa)
-- Mode waitlist aktif: halaman `/masuk` dan `/daftar-akun` menampilkan form
+- Mode waitlist dikontrol `NEXT_PUBLIC_WAITLIST_MODE` (`"true"` default).
+  Mode waitlist: halaman `/masuk` dan `/daftar-akun` menampilkan form
   waitlist (nama + nomor WhatsApp + email opsional) yang dikirim ke
   `POST /api/waitlist`. BFF memvalidasi lalu meneruskan ke
   `WAITLIST_FORWARD_URL` (endpoint eksternal); kosong berarti pendaftaran belum
-  dibuka (`503` dengan pesan jujur). Login dan pendaftaran akun tertutup untuk
-  semua orang selama mode ini.
+  dibuka (`503` dengan pesan jujur).
+- Mode terbuka (`"false"`): halaman yang sama menampilkan form login dan
+  pendaftaran akun asli.
 - `POST /api/session/daftar` (Tokowa) menerima `{nama, email, password}`,
   memanggil `POST /api/auth/register` obrool. Akun baru wajib verifikasi email
   sebelum bisa dipakai `POST /api/session`.
@@ -413,9 +415,11 @@ uang tetap bergerak langsung pembeli↔toko (platform tidak memegang dana).
   tampil dan direkomendasikan di Tokowa, tetapi chat dan transaksi berjalan
   langsung di agent milik usaha itu.
 - **Penanda kelulusan:** `TokoSetting.wabaSendiri` (boolean) +
-  `nomorJualan` (nomor WhatsApp publik toko). Katalog, detail produk, dan
-  profil toko mengembalikan kedua field; UI menampilkan badge "Toko mandiri"
-  dan tombol "Chat langsung" (`wa.me/<nomorJualan>`) bila true.
+  `nomorJualan` (nomor WhatsApp publik toko, digit 9-15). Status mandiri
+  diaktifkan obrool saat pengajuan WABA disetujui (server-side); Tokowa tidak
+  menyediakan aktivasi mandiri. Pengaturan Tokowa menampilkan status + tombol
+  "Lanjut daftar di obrool" yang didahului peringatan syarat (NIB, kartu
+  kredit, nomor belum terdaftar, Business Manager, waktu verifikasi).
 - **Handoff jujur di bot platform:** bila warung terpilih adalah lulusan,
   bot platform menyerahkan dengan tautan chat langsung lalu mundur; tidak
   berpura-pura menjadi toko itu. Satu pesanan tetap milik satu agent

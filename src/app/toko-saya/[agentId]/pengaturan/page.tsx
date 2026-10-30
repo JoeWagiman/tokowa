@@ -20,6 +20,8 @@ type Setting = {
   kurirInstanJarakMaksKm: number | null;
   lat: number | null;
   lng: number | null;
+  wabaSendiri: boolean;
+  nomorJualan: string | null;
   qrisStatisNama: string | null;
   qrisStatisUrl: string | null;
 };
@@ -76,6 +78,55 @@ export default async function HalamanPengaturan({
               </div>
             )}
             {setting && <FormPengaturan agentId={agentId} setting={setting} />}
+            {setting && (
+              <section className="kartu" style={{ marginTop: 16 }} aria-label="Nomor WhatsApp sendiri">
+                <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>Nomor WhatsApp sendiri</h2>
+                {setting.wabaSendiri === true ? (
+                  <p style={{ fontSize: 14 }}>
+                    <span className="chip chip-ok">Toko mandiri</span>
+                    <span style={{ color: "var(--muted)" }}>
+                      {" "}
+                      Chat pembeli langsung ke {setting.nomorJualan ?? "nomormu"}; tokomu tetap
+                      direkomendasikan di Tokowa.
+                    </span>
+                  </p>
+                ) : (
+                  <>
+                    <p style={{ color: "var(--muted)", fontSize: 14 }}>
+                      Saat ini pembeli chat lewat nomor platform Tokowa. Punya WABA sendiri
+                      artinya chat pindah ke nomormu, tetapi pendaftarannya lewat obrool dan
+                      butuh persiapan. Baca syaratnya dulu sebelum lanjut.
+                    </p>
+                    <details style={{ marginTop: 12 }}>
+                      <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
+                        Syarat pengajuan WABA sendiri
+                      </summary>
+                      <ul style={{ color: "var(--muted)", fontSize: 14, paddingLeft: 20, marginTop: 8, display: "grid", gap: 6 }}>
+                        <li>Dokumen legalitas usaha (mis. NIB) untuk verifikasi bisnis Meta.</li>
+                        <li>Kartu kredit untuk tagihan percakapan WhatsApp.</li>
+                        <li>Nomor HP aktif yang belum terdaftar di WhatsApp mana pun.</li>
+                        <li>Akun Facebook Business Manager atas nama usaha.</li>
+                        <li>Waktu tunggu verifikasi hitungan hari sampai minggu; siapkan juga email aktif.</li>
+                      </ul>
+                    </details>
+                    <div className="baris-aksi">
+                      <a
+                        className="btn"
+                        href={`${process.env.NEXT_PUBLIC_OBROOL_URL ?? "https://obrool.com"}/dashboard`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Lanjut daftar di obrool
+                      </a>
+                    </div>
+                    <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 8 }}>
+                      Status mandiri diaktifkan obrool setelah nomormu disetujui; tidak bisa
+                      diaktifkan dari sini.
+                    </p>
+                  </>
+                )}
+              </section>
+            )}
           </section>
         </div>
       </main>

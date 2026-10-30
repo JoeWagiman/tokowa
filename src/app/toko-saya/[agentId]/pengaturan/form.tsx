@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Setting = {
   jamBuka: string | null;
@@ -25,12 +25,35 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
   const [hari, setHari] = useState<Set<number>>(new Set(hariAwal));
   const [pesan, setPesan] = useState<{ jenis: "ok" | "galat"; teks: string } | null>(null);
   const [sibuk, setSibuk] = useState(false);
+  const [lokasi, setLokasi] = useState<{ status: "idle" | "meminta" | "gagal"; teks: string }>({
+    status: "idle",
+    teks: "",
+  });
+  const latRef = useRef<HTMLInputElement>(null);
+  const lngRef = useRef<HTMLInputElement>(null);
 
   function gantiHari(i: number, aktif: boolean) {
     const b = new Set(hari);
     if (aktif) b.add(i);
     else b.delete(i);
     setHari(b);
+  }
+
+  function pakaiLokasiSaya() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setLokasi({ status: "gagal", teks: "Browser tidak mendukung lokasi. Isi angkanya manual." });
+      return;
+    }
+    setLokasi({ status: "meminta", teks: "Mengambil titik lokasimu…" });
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        if (latRef.current) latRef.current.value = String(p.coords.latitude.toFixed(6));
+        if (lngRef.current) lngRef.current.value = String(p.coords.longitude.toFixed(6));
+        setLokasi({ status: "idle", teks: "Titik tercatat. Tekan Simpan untuk menyimpan." });
+      },
+      () => setLokasi({ status: "gagal", teks: "Lokasi tidak didapat. Izinkan akses lokasi atau isi manual." }),
+      { timeout: 10_000 }
+    );
   }
 
   async function simpan(e: React.FormEvent<HTMLFormElement>) {
@@ -189,6 +212,7 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
           <label>
             Titik toko: latitude
             <input
+              ref={latRef}
               className="rincian-input"
               name="lat"
               type="number"
@@ -202,6 +226,7 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
           <label>
             Titik toko: longitude
             <input
+              ref={lngRef}
               className="rincian-input"
               name="lng"
               type="number"
@@ -213,6 +238,21 @@ export function FormPengaturan({ agentId, setting }: { agentId: string; setting:
             />
           </label>
         </div>
+        <div className="baris-aksi" style={{ marginTop: 10 }}>
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={pakaiLokasiSaya}
+            disabled={lokasi.status === "meminta"}
+          >
+            {lokasi.status === "meminta" ? "Mengambil lokasi…" : "Pakai lokasi saya"}
+          </button>
+        </div>
+        {lokasi.teks && (
+          <p style={{ color: lokasi.status === "gagal" ? "var(--danger-ink)" : "var(--muted)", fontSize: 13, marginTop: 6 }} role="status">
+            {lokasi.teks}
+          </p>
+        )}
         <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
           Ongkir kurir instan dihitung dari jarak titik toko ke titik lokasi pembeli: tarif dasar mencakup 3 km
           pertama, selebihnya per km (dibulatkan ke atas). Kosongkan tarif dasar atau per km untuk menonaktifkan
