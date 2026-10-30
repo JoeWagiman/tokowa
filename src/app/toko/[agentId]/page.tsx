@@ -24,6 +24,7 @@ export default async function HalamanToko({
 
   const jam = t?.jamOperasional;
   const wa = waLink(`Halo, saya lihat ${t ? t.nama : "toko"} di Tokowa.`);
+  const mandiri = t?.wabaSendiri === true && Boolean(t?.nomorJualan);
 
   return (
     <>
@@ -42,10 +43,27 @@ export default async function HalamanToko({
           {t && (
             <>
               <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.02em" }}>{t.nama}</h1>
+              {mandiri && (
+                <p style={{ marginTop: 8 }}>
+                  <span className="chip chip-ok">Toko mandiri</span>
+                </p>
+              )}
               <p className="toko-meta">
                 Dikelola oleh {t.pemilik ?? t.nama}
                 {jam ? ` · ${jam.hari && jam.hari.length ? jam.hari.join(", ") : "setiap hari"} · ${jam.buka}–${jam.tutup}` : ""}
               </p>
+              {mandiri && (
+                <div className="baris-aksi" style={{ marginBottom: 16 }}>
+                  <a
+                    className="btn"
+                    href={`https://wa.me/${t.nomorJualan}?text=${encodeURIComponent(`Halo ${t.nama}, saya lihat tokomu di Tokowa.`)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Chat langsung
+                  </a>
+                </div>
+              )}
               {t.items.length === 0 ? (
                 <div className="kosong">
                   <h3>Belum ada produk di toko ini.</h3>

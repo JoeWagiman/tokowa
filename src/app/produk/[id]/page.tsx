@@ -91,6 +91,11 @@ function Isi({ p }: { p: ProdukDetail }) {
           <a href={`/toko/${p.agentId}`} style={{ fontWeight: 600, color: "var(--accent-ink)" }}>
             {p.toko}
           </a>
+          {p.wabaSendiri === true && (
+            <span className="chip chip-ok" style={{ marginLeft: 8 }}>
+              Toko mandiri
+            </span>
+          )}
           {p.jamOperasional ? ` · buka ${p.jamOperasional.buka}–${p.jamOperasional.tutup}` : null}
         </p>
 

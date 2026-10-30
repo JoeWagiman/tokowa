@@ -1,9 +1,19 @@
 import Link from "next/link";
+import { FormMasuk } from "@/components/form-masuk";
 import { FormWaitlist } from "@/components/form-waitlist";
 
-export const metadata = { title: "Gabung waitlist" };
+export const metadata = { title: "Masuk" };
+
+const MODE_WAITLIST = (process.env.NEXT_PUBLIC_WAITLIST_MODE ?? "true").trim() !== "false";
 
 export default function HalamanMasuk() {
+  if (!MODE_WAITLIST) {
+    return (
+      <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+        <FormMasuk />
+      </main>
+    );
+  }
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
       <div style={{ width: "min(380px, 100%)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 28 }}>
