@@ -34,6 +34,12 @@ Sellers ride on Tokowa's approved sender instead of registering their own:
   (laundry, car wash, housekeeping): anything with a price list and a
   fulfillment step.
 
+When a seller outgrows the shared number, they graduate: they register their
+own WABA through obrool (the full legal + Meta process), keep their listing
+and recommendation on Tokowa, and from then on chat and transact directly
+through their own agent. Tokowa stays the discovery layer; the business owns
+its channel.
+
 This repo is the **storefront frontend** (Next.js App Router). The backend
 (agents, WhatsApp Cloud API, payments, logistics) lives in a separate project,
 **obrool**, which this app calls over HTTP.

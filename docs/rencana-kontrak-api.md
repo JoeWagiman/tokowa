@@ -405,6 +405,26 @@ uang tetap bergerak langsung pembeli↔toko (platform tidak memegang dana).
   `/lacak`, halaman penjual `/toko-saya/[agentId]/sengketa`, halaman admin
   `/admin/sengketa`, dan cabut suspensi di `/admin/penjual`.
 
+### 4.15 Dua tingkat: penumpang Tokowa dan lulusan WABA
+- **Tingkat 1, penumpang (default).** Usaha tanpa NIB/kartu kredit jualan
+  menumpang nomor platform Tokowa. Chat dan transaksi lewat agent platform.
+- **Tingkat 2, lulusan WABA.** Penjual yang siap legalitas + kartu kredit
+  mengajukan WABA sendiri lewat obrool. Setelah disetujui Meta, toko tetap
+  tampil dan direkomendasikan di Tokowa, tetapi chat dan transaksi berjalan
+  langsung di agent milik usaha itu.
+- **Penanda kelulusan:** `TokoSetting.wabaSendiri` (boolean) +
+  `nomorJualan` (nomor WhatsApp publik toko). Katalog, detail produk, dan
+  profil toko mengembalikan kedua field; UI menampilkan badge "Toko mandiri"
+  dan tombol "Chat langsung" (`wa.me/<nomorJualan>`) bila true.
+- **Handoff jujur di bot platform:** bila warung terpilih adalah lulusan,
+  bot platform menyerahkan dengan tautan chat langsung lalu mundur; tidak
+  berpura-pura menjadi toko itu. Satu pesanan tetap milik satu agent
+  (pemilik transaksi).
+- **Aturan matching:** lulusan tetap ikut pencocokan warung terdekat dengan
+  bobot sama; tidak ada prioritas khusus.
+- **Uang, retur, sengketa, teguran tidak berubah** di kedua tingkat karena
+  model transaksinya sama; bedanya hanya kanal chat.
+
 ## 5. Keputusan yang sudah dikunci
 
 - **KYC satu backend.** Tidak ada state KYC yang disimpan di Tokowa; antrean
@@ -466,6 +486,9 @@ uang tetap bergerak langsung pembeli↔toko (platform tidak memegang dana).
   toko; putusannya penengahan tercatat karena uang bergerak langsung
   pembeli↔toko. Sengketa yang dimenangkan pembeli di tahap admin menjadi
   teguran; 3 teguran dalam 90 hari menyuspensi toko (bagian 4.14).
+- **Tokowa dua tingkat, lulus WABA via obrool.** Penumpang jualan menumpang
+  nomor platform; lulusan tetap direkomendasikan di Tokowa tetapi chat dan
+  transaksi langsung di agent miliknya (bagian 4.15).
 - **WA number belum diatur.** Semua tombol WhatsApp nonaktif dengan
   `title="Nomor WhatsApp belum diatur"`. Ini keadaan yang disengaja, bukan bug.
 
